@@ -1,0 +1,8 @@
+*.exe
+GoFesl*
+test*
+.vscode*
+debug*
+*.zip
+config.yml
+*.pem
