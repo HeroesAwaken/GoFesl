@@ -1,0 +1,12 @@
+{
+	"GID": "0",
+	"LID": "0",
+	"PORT": "53163",
+	"PTYPE": "P",
+	"R-INT-IP": "192.168.0.5",
+	"R-INT-PORT": "53163",
+	"R-U-category": "3",
+	"R-U-dataCenter": "iad",
+	"R-U-externalIp": "0.0.0.0",
+	"TID": "4"
+}

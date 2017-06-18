@@ -124,6 +124,38 @@ func (fM *FeslManager) GetTelemetryToken(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
+func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	answerPacket := make(map[string]string)
+	answerPacket["TXN"] = "Status"
+	answerPacket["id.id"] = "605"
+	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
+	answerPacket["sessionState"] = "COMPLETE"
+	answerPacket["props.{}"] = "3"
+	answerPacket["props.{resultType}"] = "LIST"
+	answerPacket["props.{availableServerCount}"] = "0"
+	answerPacket["props.{avgFit}"] = "100"
+
+	answerPacket["props.{games}.[]"] = "1"
+	answerPacket["props.{games}.0.lid"] = "0"
+	answerPacket["props.{games}.0.gid"] = "0"
+	answerPacket["props.{games}.0.fit"] = "0"
+	answerPacket["props.{games}.0.avgFit"] = "0"
+	/*
+		answerPacket["props.{games}.1.lid"] = "2"
+		answerPacket["props.{games}.1.fit"] = "100"
+		answerPacket["props.{games}.1.gid"] = "2"
+		answerPacket["props.{games}.1.avgFit"] = "100"
+	*/
+
+	event.Client.WriteFESL("pnow", answerPacket, 0x80000000)
+	fM.logAnswer("pnow", answerPacket, 0x80000000)
+}
+
 func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -132,10 +164,12 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Start"
-	answerPacket["id.id"] = "1"
+	answerPacket["id.id"] = "605"
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
+
+	fM.Status(event)
 }
 
 func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
