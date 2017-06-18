@@ -9,19 +9,19 @@ import (
 
 type ServerManager struct {
 	name          string
-	socket        *gs.Socket
+	socket        *gs.SocketTLS
 	eventsChannel chan gs.SocketEvent
 	batchTicker   *time.Ticker
 	stopTicker    chan bool
 }
 
 // New creates and starts a new ClientManager
-func (sM *ServerManager) New(name string, port string) {
+func (sM *ServerManager) New(name string, port string, certFile string, keyFile string) {
 	var err error
 
-	sM.socket = new(gs.Socket)
+	sM.socket = new(gs.SocketTLS)
 	sM.name = name
-	sM.eventsChannel, err = sM.socket.New(sM.name, port, false)
+	sM.eventsChannel, err = sM.socket.New(sM.name, port, certFile, keyFile)
 	sM.stopTicker = make(chan bool, 1)
 
 	if err != nil {
@@ -37,9 +37,9 @@ func (sM *ServerManager) run() {
 		case event := <-sM.eventsChannel:
 			switch {
 			case event.Name == "newClient":
-				go sM.newClient(event.Data.(gs.EventNewClient))
+				go sM.newClient(event.Data.(gs.EventNewClientTLS))
 			case event.Name == "client.command":
-				log.Debugf("Got event %s: %v", event.Name, event.Data.(gs.EventClientCommand).Command)
+				log.Debugf("Got event %s: %v", event.Name, event.Data.(gs.EventClientTLSCommand).Command)
 			default:
 				log.Debugf("Got event %s: %v", event.Name, event.Data)
 			}
@@ -47,7 +47,7 @@ func (sM *ServerManager) run() {
 	}
 }
 
-func (sM *ServerManager) newClient(event gs.EventNewClient) {
+func (sM *ServerManager) newClient(event gs.EventNewClientTLS) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return

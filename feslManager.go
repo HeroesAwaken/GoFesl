@@ -17,16 +17,18 @@ type FeslManager struct {
 	eventsChannel chan gs.SocketEvent
 	batchTicker   *time.Ticker
 	stopTicker    chan bool
+	server        bool
 }
 
 // New creates and starts a new ClientManager
-func (fM *FeslManager) New(name string, port string, certFile string, keyFile string) {
+func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool) {
 	var err error
 
 	fM.socket = new(gs.SocketTLS)
 	fM.name = name
 	fM.eventsChannel, err = fM.socket.New(fM.name, port, certFile, keyFile)
 	fM.stopTicker = make(chan bool, 1)
+	fM.server = server
 
 	if err != nil {
 		log.Errorln(err)
@@ -196,18 +198,20 @@ func (fM *FeslManager) GetPingSites(event gs.EventClientTLSCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "GetPingSites"
 	answerPacket["minPingSitesToPing"] = "0"
-	answerPacket["pingSites.[]"] = "1"
+	answerPacket["pingSites.[]"] = "4"
 	answerPacket["pingSites.0.addr"] = "127.0.0.1"
-	answerPacket["pingSites.0.name"] = "eu-ip"
+	answerPacket["pingSites.0.name"] = "gva"
 	answerPacket["pingSites.0.type"] = "0"
-	/*
-		answerPacket["pingSites.1.addr"] = "5.9.107.138"
-		answerPacket["pingSites.1.name"] = "ec-ip"
-		answerPacket["pingSites.1.type"] = "0"
-		answerPacket["pingSites.2.addr"] = "5.9.107.138"
-		answerPacket["pingSites.2.name"] = "wc-ip"
-		answerPacket["pingSites.2.type"] = "0"
-	*/
+	answerPacket["pingSites.1.addr"] = "127.0.0.1"
+	answerPacket["pingSites.1.name"] = "nrt"
+	answerPacket["pingSites.1.type"] = "0"
+	answerPacket["pingSites.2.addr"] = "127.0.0.1"
+	answerPacket["pingSites.2.name"] = "iad"
+	answerPacket["pingSites.2.type"] = "0"
+	answerPacket["pingSites.3.addr"] = "127.0.0.1"
+	answerPacket["pingSites.3.name"] = "sjc"
+	answerPacket["pingSites.3.type"] = "0"
+
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
@@ -422,7 +426,11 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
 	helloPacket["theaterIp"] = "bfwest-dedicated.theater.ea.com"
-	helloPacket["theaterPort"] = "18275"
+	if fM.server {
+		helloPacket["theaterPort"] = "18056"
+	} else {
+		helloPacket["theaterPort"] = "18275"
+	}
 	event.Client.WriteFESL("fsys", helloPacket, 0xC0000001)
 	fM.logAnswer("fsys", helloPacket, 0xC0000001)
 

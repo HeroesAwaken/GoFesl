@@ -68,13 +68,16 @@ func main() {
 	// Startup done
 
 	feslManager := new(FeslManager)
-	feslManager.New("FM", "18270", *certFileFlag, *keyFileFlag)
+	feslManager.New("FM", "18270", *certFileFlag, *keyFileFlag, false)
 
-	serverManager := new(ServerManager)
-	serverManager.New("SM", "18051")
+	serverManager := new(FeslManager)
+	serverManager.New("SFM", "18051", *certFileFlag, *keyFileFlag, true)
 
 	theaterManager := new(TheaterManager)
 	theaterManager.New("TM", "18275")
+
+	servertheaterManager := new(TheaterManager)
+	servertheaterManager.New("STM", "18056")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
