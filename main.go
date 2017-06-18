@@ -70,6 +70,9 @@ func main() {
 	feslManager := new(FeslManager)
 	feslManager.New("FM", "18270", *certFileFlag, *keyFileFlag)
 
+	serverManager := new(ServerManager)
+	serverManager.New("SM", "18051")
+
 	theaterManager := new(TheaterManager)
 	theaterManager.New("TM", "18275")
 

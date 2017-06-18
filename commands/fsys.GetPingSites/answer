@@ -1,0 +1,8 @@
+{
+	"TXN": "GetPingSites",
+	"minPingSitesToPing": "0",
+	"pingSites.0.addr": "127.0.0.1",
+	"pingSites.0.name": "eu-ip",
+	"pingSites.0.type": "0",
+	"pingSites.[]": "1"
+}

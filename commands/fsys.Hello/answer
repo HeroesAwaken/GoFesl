@@ -1,0 +1,11 @@
+{
+	"TXN": "Hello",
+	"activityTimeoutSecs": "0",
+	"curTime": "Jun-15-2017 07:26:12 UTC",
+	"domainPartition.domain": "eagames",
+	"domainPartition.subDomain": "bfwest-dedicated",
+	"messengerIp": "messaging.ea.com",
+	"messengerPort": "13505",
+	"theaterIp": "bfwest-dedicated.theater.ea.com",
+	"theaterPort": "18275"
+}

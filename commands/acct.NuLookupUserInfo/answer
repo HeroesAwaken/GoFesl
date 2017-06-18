@@ -1,0 +1,15 @@
+{
+	"TXN": "NuLookupUserInfo",
+	"user": "1",
+	"userInfo.0.masterUserId": "1",
+	"userInfo.0.namespace": "MAIN",
+	"userInfo.0.userId": "1",
+	"userInfo.0.userName": "MakaHost",
+	"userInfo.0.xuid": "1",
+	"userInfo.1.masterUserId": "1",
+	"userInfo.1.namespace": "MAIN",
+	"userInfo.1.userId": "2",
+	"userInfo.1.userName": "MakaHost2",
+	"userInfo.1.xuid": "1",
+	"userInfo.[]": "2"
+}

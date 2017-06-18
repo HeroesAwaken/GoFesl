@@ -1,0 +1,21 @@
+{
+	"TXN": "GetStatsForOwners",
+	"keys.0": "elo",
+	"keys.1": "xp",
+	"keys.10": "c_team",
+	"keys.2": "level",
+	"keys.3": "c_apr",
+	"keys.4": "c_fhrs",
+	"keys.5": "c_hrs",
+	"keys.6": "c_hrc",
+	"keys.7": "c_skc",
+	"keys.8": "c_ft",
+	"keys.9": "c_kit",
+	"keys.[]": "11",
+	"owners.0.ownerId": "1",
+	"owners.0.ownerType": "1",
+	"owners.1.ownerId": "2",
+	"owners.1.ownerType": "1",
+	"owners.[]": "2",
+	"periodId": "0"
+}

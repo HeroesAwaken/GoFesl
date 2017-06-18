@@ -84,10 +84,10 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 		return
 	}
 
-	answerPacket := event.Command.Message
+	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["NAME"] = "MakaHost"
-	answerPacket["CID"] = "3"
+	answerPacket["CID"] = "1"
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 }
 
@@ -100,8 +100,8 @@ func (tM *TheaterManager) CONN(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["TIME"] = strconv.FormatInt(time.Now().UTC().Unix(), 10)
-	answerPacket["activityTimeoutSecs"] = "5"
-	answerPacket["PROT"] = "2"
+	answerPacket["activityTimeoutSecs"] = "15"
+	answerPacket["PROT"] = event.Command.Message["PROT"]
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 }
 
@@ -112,6 +112,24 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 	}
 	log.Noteln("Client connecting")
 
+	// Start Heartbeat
+	event.Client.State.HeartTicker = time.NewTicker(time.Second * 10)
+	go func() {
+		for {
+			if !event.Client.IsActive {
+				return
+			}
+			select {
+			case <-event.Client.State.HeartTicker.C:
+				if !event.Client.IsActive {
+					return
+				}
+				pingPacket := make(map[string]string)
+				pingPacket["TID"] = "0"
+				event.Client.WriteFESL("PING", pingPacket, 0x0)
+			}
+		}
+	}()
 }
 
 func (tM *TheaterManager) close(event gs.EventClientTLSClose) {

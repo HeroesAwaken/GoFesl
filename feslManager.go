@@ -1,6 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"strconv"
 	"time"
 
 	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
@@ -37,28 +41,35 @@ func (fM *FeslManager) run() {
 		case event := <-fM.eventsChannel:
 			switch {
 			case event.Name == "newClient":
-				go fM.newClient(event.Data.(gs.EventNewClientTLS))
+				fM.newClient(event.Data.(gs.EventNewClientTLS))
 			case event.Name == "client.command.Hello":
-				go fM.hello(event.Data.(gs.EventClientTLSCommand))
+				fM.hello(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.NuLogin":
-				go fM.NuLogin(event.Data.(gs.EventClientTLSCommand))
+				fM.NuLogin(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.NuGetPersonas":
-				go fM.NuGetPersonas(event.Data.(gs.EventClientTLSCommand))
+				fM.NuGetPersonas(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.NuGetAccount":
-				go fM.NuGetAccount(event.Data.(gs.EventClientTLSCommand))
+				fM.NuGetAccount(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.NuLoginPersona":
-				go fM.NuLoginPersona(event.Data.(gs.EventClientTLSCommand))
+				fM.NuLoginPersona(event.Data.(gs.EventClientTLSCommand))
+			case event.Name == "client.command.GetStatsForOwners":
+				fM.GetStatsForOwners(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.GetStats":
-				go fM.GetStats(event.Data.(gs.EventClientTLSCommand))
+				fM.GetStats(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.NuLookupUserInfo":
-				go fM.NuLookupUserInfo(event.Data.(gs.EventClientTLSCommand))
+				fM.NuLookupUserInfo(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.GetPingSites":
-				go fM.GetPingSites(event.Data.(gs.EventClientTLSCommand))
+				fM.GetPingSites(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.command.UpdateStats":
-				go fM.UpdateStats(event.Data.(gs.EventClientTLSCommand))
+				fM.UpdateStats(event.Data.(gs.EventClientTLSCommand))
+			case event.Name == "client.command.GetTelemetryToken":
+				fM.GetTelemetryToken(event.Data.(gs.EventClientTLSCommand))
+			case event.Name == "client.command.Start":
+				fM.Start(event.Data.(gs.EventClientTLSCommand))
 			case event.Name == "client.close":
-				go fM.close(event.Data.(gs.EventClientTLSClose))
+				fM.close(event.Data.(gs.EventClientTLSClose))
 			case event.Name == "client.command":
+				fM.LogCommand(event.Data.(gs.EventClientTLSCommand))
 				log.Debugf("Got event %s.%s: %v", event.Name, event.Data.(gs.EventClientTLSCommand).Command.Message["TXN"], event.Data.(gs.EventClientTLSCommand).Command)
 			default:
 				log.Debugf("Got event %s: %v", event.Name, event.Data)
@@ -67,15 +78,79 @@ func (fM *FeslManager) run() {
 	}
 }
 
-func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
+func (fM *FeslManager) LogCommand(event gs.EventClientTLSCommand) {
+	b, err := json.MarshalIndent(event.Command.Message, "", "	")
+	if err != nil {
+		panic(err)
+	}
+
+	commandType := "request"
+
+	os.MkdirAll("./commands/"+event.Command.Query+"."+event.Command.Message["TXN"]+"", 0777)
+	err = ioutil.WriteFile("./commands/"+event.Command.Query+"."+event.Command.Message["TXN"]+"/"+commandType, b, 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (fM *FeslManager) logAnswer(msgType string, msgContent map[string]string, msgType2 uint32) {
+	b, err := json.MarshalIndent(msgContent, "", "	")
+	if err != nil {
+		panic(err)
+	}
+
+	commandType := "answer"
+
+	os.MkdirAll("./commands/"+msgType+"."+msgContent["TXN"]+"", 0777)
+	err = ioutil.WriteFile("./commands/"+msgType+"."+msgContent["TXN"]+"/"+commandType, b, 0644)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (fM *FeslManager) GetTelemetryToken(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return
 	}
 
 	answerPacket := make(map[string]string)
-	answerPacket["TXN"] = "UpdateStats"
+	answerPacket["TXN"] = "GetTelemetryToken"
+	answerPacket["telemetryToken"] = "MTU5LjE1My4yMzUuMjYsOTk0NixlblVTLF7ZmajcnLfGpKSJk53K/4WQj7LRw9asjLHvxLGhgoaMsrDE3bGWhsyb4e6woYKGjJiw4MCBg4bMsrnKibuDppiWxYKditSp0amvhJmStMiMlrHk4IGzhoyYsO7A4dLM26rTgAo%3d"
+	answerPacket["enabled"] = "US"
+	answerPacket["filters"] = ""
+	answerPacket["disabled"] = ""
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
+}
+
+func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	answerPacket := make(map[string]string)
+	answerPacket["TXN"] = "Start"
+	answerPacket["id.id"] = "1"
+	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
+	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
+}
+
+func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	answerPacket := event.Command.Message
+	answerPacket["TXN"] = "UpdateStats"
+
+	answerPacket["u.0.s.1.k"] = "c_wallet_hero"
+	answerPacket["u.0.s.1.v"] = "5"
+	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) GetPingSites(event gs.EventClientTLSCommand) {
@@ -87,17 +162,20 @@ func (fM *FeslManager) GetPingSites(event gs.EventClientTLSCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "GetPingSites"
 	answerPacket["minPingSitesToPing"] = "0"
-	answerPacket["pingSites.[]"] = "3"
-	answerPacket["pingSites.0.addr"] = "5.9.107.138"
+	answerPacket["pingSites.[]"] = "1"
+	answerPacket["pingSites.0.addr"] = "127.0.0.1"
 	answerPacket["pingSites.0.name"] = "eu-ip"
 	answerPacket["pingSites.0.type"] = "0"
-	answerPacket["pingSites.1.addr"] = "5.9.107.138"
-	answerPacket["pingSites.1.name"] = "ec-ip"
-	answerPacket["pingSites.1.type"] = "0"
-	answerPacket["pingSites.2.addr"] = "5.9.107.138"
-	answerPacket["pingSites.2.name"] = "wc-ip"
-	answerPacket["pingSites.2.type"] = "0"
+	/*
+		answerPacket["pingSites.1.addr"] = "5.9.107.138"
+		answerPacket["pingSites.1.name"] = "ec-ip"
+		answerPacket["pingSites.1.type"] = "0"
+		answerPacket["pingSites.2.addr"] = "5.9.107.138"
+		answerPacket["pingSites.2.name"] = "wc-ip"
+		answerPacket["pingSites.2.type"] = "0"
+	*/
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) NuLoginPersona(event gs.EventClientTLSCommand) {
@@ -109,9 +187,10 @@ func (fM *FeslManager) NuLoginPersona(event gs.EventClientTLSCommand) {
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLoginPersona"
 	loginPacket["lkey"] = "12345"
-	loginPacket["profileId"] = "0"
-	loginPacket["userId"] = "0"
+	loginPacket["profileId"] = "1"
+	loginPacket["userId"] = "1"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
@@ -128,6 +207,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	loginPacket["entitledGameFeatureWrappers.entitlementExpirationDate"] = ""
 	loginPacket["entitlementExpirationDays"] = "-1"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
@@ -140,17 +220,18 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 	personaPacket["TXN"] = "NuLookupUserInfo"
 	personaPacket["user"] = "1"
 	personaPacket["userInfo.[]"] = "2"
-	personaPacket["userInfo.0.userName"] = "default"
-	personaPacket["userInfo.0.userId"] = "0"
-	personaPacket["userInfo.0.xuid"] = "0"
-	personaPacket["userInfo.0.masterUserId"] = "0"
+	personaPacket["userInfo.0.userName"] = "MakaHost"
+	personaPacket["userInfo.0.userId"] = "1"
+	personaPacket["userInfo.0.xuid"] = "1"
+	personaPacket["userInfo.0.masterUserId"] = "1"
 	personaPacket["userInfo.0.namespace"] = "MAIN"
-	personaPacket["userInfo.1.userName"] = "MakaHost"
-	personaPacket["userInfo.1.userId"] = "1"
+	personaPacket["userInfo.1.userName"] = "MakaHost2"
+	personaPacket["userInfo.1.userId"] = "2"
 	personaPacket["userInfo.1.xuid"] = "1"
-	personaPacket["userInfo.1.masterUserId"] = "0"
+	personaPacket["userInfo.1.masterUserId"] = "1"
 	personaPacket["userInfo.1.namespace"] = "MAIN"
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
@@ -161,10 +242,11 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 
 	personaPacket := make(map[string]string)
 	personaPacket["TXN"] = "NuGetPersonas"
-	personaPacket["personas.0"] = "default"
-	personaPacket["personas.1"] = "MakaHost"
+	personaPacket["personas.0"] = "MakaHost"
+	personaPacket["personas.1"] = "MakaHost2"
 	personaPacket["personas.[]"] = "2"
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
@@ -186,6 +268,72 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	loginPacket["language"] = "en"
 	loginPacket["country"] = "DE"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+}
+
+func (fM *FeslManager) GetStatsForOwners(event gs.EventClientTLSCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+	loginPacket := make(map[string]string)
+	loginPacket["TXN"] = "GetStats"
+
+	loginPacket["stats.[]"] = "2"
+	loginPacket["stats.0.ownerId"] = "1"
+	loginPacket["stats.0.ownerType"] = "1"
+	loginPacket["stats.0.stats.[]"] = "11"
+	loginPacket["stats.0.stats.0.key"] = "elo"
+	loginPacket["stats.0.stats.0.value"] = "1"
+	loginPacket["stats.0.stats.1.key"] = "xp"
+	loginPacket["stats.0.stats.1.value"] = "500"
+	loginPacket["stats.0.stats.2.key"] = "level"
+	loginPacket["stats.0.stats.2.value"] = "2"
+	loginPacket["stats.0.stats.3.key"] = "c_apr"
+	loginPacket["stats.0.stats.3.value"] = "3"
+	loginPacket["stats.0.stats.4.key"] = "c_fhrs"
+	loginPacket["stats.0.stats.4.value"] = "0"
+	loginPacket["stats.0.stats.5.key"] = "c_hrs"
+	loginPacket["stats.0.stats.5.value"] = "0"
+	loginPacket["stats.0.stats.6.key"] = "c_hrc"
+	loginPacket["stats.0.stats.6.value"] = "0"
+	loginPacket["stats.0.stats.7.key"] = "c_skc"
+	loginPacket["stats.0.stats.7.value"] = "0"
+	loginPacket["stats.0.stats.8.key"] = "c_ft"
+	loginPacket["stats.0.stats.8.value"] = "0"
+	loginPacket["stats.0.stats.9.key"] = "c_kit"
+	loginPacket["stats.0.stats.9.value"] = "0"
+	loginPacket["stats.0.stats.10.key"] = "c_team"
+	loginPacket["stats.0.stats.10.value"] = "1"
+
+	loginPacket["stats.1.ownerId"] = "2"
+	loginPacket["stats.1.ownerType"] = "1"
+	loginPacket["stats.1.stats.[]"] = "11"
+	loginPacket["stats.1.stats.0.key"] = "elo"
+	loginPacket["stats.1.stats.0.value"] = "2"
+	loginPacket["stats.1.stats.1.key"] = "xp"
+	loginPacket["stats.1.stats.1.value"] = "5000"
+	loginPacket["stats.1.stats.2.key"] = "level"
+	loginPacket["stats.1.stats.2.value"] = "1"
+	loginPacket["stats.1.stats.3.key"] = "c_apr"
+	loginPacket["stats.1.stats.3.value"] = "1"
+	loginPacket["stats.1.stats.4.key"] = "c_fhrs"
+	loginPacket["stats.1.stats.4.value"] = "1"
+	loginPacket["stats.1.stats.5.key"] = "c_hrs"
+	loginPacket["stats.1.stats.5.value"] = "1"
+	loginPacket["stats.1.stats.6.key"] = "c_hrc"
+	loginPacket["stats.1.stats.6.value"] = "1"
+	loginPacket["stats.1.stats.7.key"] = "c_skc"
+	loginPacket["stats.1.stats.7.value"] = "1"
+	loginPacket["stats.1.stats.8.key"] = "c_ft"
+	loginPacket["stats.1.stats.8.value"] = "1"
+	loginPacket["stats.1.stats.9.key"] = "c_kit"
+	loginPacket["stats.1.stats.9.value"] = "1"
+	loginPacket["stats.1.stats.10.key"] = "c_team"
+	loginPacket["stats.1.stats.10.value"] = "2"
+
+	event.Client.WriteFESL(event.Command.Query, loginPacket, 0xC0000007)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
 func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
@@ -196,17 +344,29 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "GetStats"
-	loginPacket["stats.[]"] = "2"
-	loginPacket["stats.0"] = "MakaHost"
-	loginPacket["stats.0.ownerId"] = "0"
-	loginPacket["stats.0.ownerType"] = "0"
-	loginPacket["stats.0.stats.[]"] = "1"
-	loginPacket["stats.0.stats.0"] = "5"
-	loginPacket["stats.0.stats.1"] = "6"
-	loginPacket["stats.0.stats.2"] = "7"
-	loginPacket["stats.0.stats.3"] = "8"
-	loginPacket["stats.0.stats.4"] = "9"
+	loginPacket["ownerId"] = event.Command.Message["owner"]
+	loginPacket["ownerType"] = "1"
+	loginPacket["periodPast"] = "0"
+	loginPacket["periodId"] = "0"
+
+	loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
+	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
+	for i := 0; i < keys; i++ {
+		loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
+		loginPacket["stats."+strconv.Itoa(i)+".value"] = "99.0"
+	}
+	/*
+		loginPacket["stats.[]"] = event.Command.Message["stats.[]"]
+		loginPacket["stats.0.key"] = "c_ltm"
+		loginPacket["stats.0.value"] = "1"
+		loginPacket["stats.1.key"] = "c_slm"
+		loginPacket["stats.1.value"] = "1"
+		loginPacket["stats.1.key"] = "c_tut"
+		loginPacket["stats.1.value"] = "1"
+	*/
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+
 }
 
 func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
@@ -230,6 +390,7 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 	helloPacket["theaterIp"] = "bfwest-dedicated.theater.ea.com"
 	helloPacket["theaterPort"] = "18275"
 	event.Client.WriteFESL("fsys", helloPacket, 0xC0000001)
+	fM.logAnswer("fsys", helloPacket, 0xC0000001)
 
 }
 
@@ -244,6 +405,7 @@ func (fM *FeslManager) newClient(event gs.EventNewClientTLS) {
 	memCheck["memcheck.[]"] = "0"
 	memCheck["salt"] = "5"
 	event.Client.WriteFESL("fsys", memCheck, 0xC0000000)
+	fM.logAnswer("fsys", memCheck, 0xC0000000)
 
 	// Start Heartbeat
 	event.Client.State.HeartTicker = time.NewTicker(time.Second * 10)
