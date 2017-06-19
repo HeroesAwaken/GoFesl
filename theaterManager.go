@@ -1,36 +1,83 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
+	"net"
 	"os"
 	"strconv"
 	"time"
 
 	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
 	log "github.com/ReviveNetwork/GoRevive/Log"
+	"github.com/go-redis/redis"
 )
 
+type GameServer struct {
+	ip                 string
+	port               string
+	intIP              string
+	intPort            string
+	name               string
+	level              string
+	activePlayers      int
+	maxPlayers         int
+	queueLength        int
+	joiningPlayers     int
+	gameMode           string
+	elo                float64
+	numObservers       int
+	maxObservers       int
+	sguid              string
+	hash               string
+	password           string
+	ugid               string
+	sType              string
+	join               string
+	version            string
+	dataCenter         string
+	serverMap          string
+	armyBalance        string
+	armyDistribution   string
+	availSlotsNational bool
+	availSlotsRoyal    bool
+	avgAllyRank        float64
+	avgAxisRank        float64
+	serverState        string
+	communityName      string
+}
+
 type TheaterManager struct {
-	name          string
-	socket        *gs.Socket
-	eventsChannel chan gs.SocketEvent
-	batchTicker   *time.Ticker
-	stopTicker    chan bool
+	name             string
+	socket           *gs.Socket
+	socketUDP        *gs.SocketUDP
+	db               *sql.DB
+	redis            *redis.Client
+	eventsChannel    chan gs.SocketEvent
+	eventsChannelUDP chan gs.SocketUDPEvent
+	batchTicker      *time.Ticker
+	stopTicker       chan bool
 }
 
 // New creates and starts a new ClientManager
-func (tM *TheaterManager) New(name string, port string) {
+func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client) {
 	var err error
 
 	tM.socket = new(gs.Socket)
+	tM.socketUDP = new(gs.SocketUDP)
+	tM.db = db
+	tM.redis = redis
 	tM.name = name
 	tM.eventsChannel, err = tM.socket.New(tM.name, port, true)
-	tM.stopTicker = make(chan bool, 1)
-
 	if err != nil {
 		log.Errorln(err)
 	}
+	tM.eventsChannelUDP, err = tM.socketUDP.New(tM.name, port, true)
+	if err != nil {
+		log.Errorln(err)
+	}
+	tM.stopTicker = make(chan bool, 1)
 
 	go tM.run()
 }
@@ -38,6 +85,16 @@ func (tM *TheaterManager) New(name string, port string) {
 func (tM *TheaterManager) run() {
 	for {
 		select {
+		case event := <-tM.eventsChannelUDP:
+			switch {
+			case event.Name == "command.ECHO":
+				go tM.ECHO(event)
+			case event.Name == "command":
+				tM.LogCommandUDP(event.Data.(*gs.CommandFESL))
+				log.Debugf("UDP Got event %s: %v", event.Name, event.Data.(*gs.CommandFESL))
+			default:
+				log.Debugf("UDP Got event %s: %v", event.Name, event.Data)
+			}
 		case event := <-tM.eventsChannel:
 			switch {
 			case event.Name == "newClient":
@@ -52,6 +109,10 @@ func (tM *TheaterManager) run() {
 				go tM.GDAT(event.Data.(gs.EventClientFESLCommand))
 			case event.Name == "client.command.EGAM":
 				go tM.EGAM(event.Data.(gs.EventClientFESLCommand))
+			case event.Name == "client.command.ECNL":
+				go tM.ECNL(event.Data.(gs.EventClientFESLCommand))
+			case event.Name == "client.command.CGAM":
+				go tM.CGAM(event.Data.(gs.EventClientFESLCommand))
 			case event.Name == "client.command":
 				tM.LogCommand(event.Data.(gs.EventClientFESLCommand))
 				log.Debugf("Got event %s: %v", event.Name, event.Data.(gs.EventClientFESLCommand).Command)
@@ -60,6 +121,37 @@ func (tM *TheaterManager) run() {
 			}
 		}
 	}
+}
+
+func (tM *TheaterManager) ECHO(event gs.SocketUDPEvent) {
+	command := event.Data.(*gs.CommandFESL)
+
+	answerPacket := make(map[string]string)
+	answerPacket["TID"] = command.Message["TID"]
+	answerPacket["TXN"] = command.Message["TXN"]
+	answerPacket["IP"] = event.Addr.IP.String()
+	answerPacket["PORT"] = strconv.Itoa(event.Addr.Port)
+	answerPacket["ERR"] = "0"
+	answerPacket["TYPE"] = "1"
+	err := tM.socketUDP.WriteFESL("ECHO", answerPacket, 0x0, event.Addr)
+	if err != nil {
+		log.Errorln(err)
+	}
+	tM.logAnswer("ECHO", answerPacket, 0x0)
+}
+
+func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	answerPacket := make(map[string]string)
+	answerPacket["TID"] = event.Command.Message["TID"]
+	answerPacket["GID"] = event.Command.Message["GID"]
+	answerPacket["LID"] = event.Command.Message["LID"]
+	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
+	tM.logAnswer("EGAM", answerPacket, 0x0)
 }
 
 func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
@@ -76,6 +168,67 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	tM.logAnswer("EGAM", answerPacket, 0x0)
 }
 
+func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	addr, ok := event.Client.IpAddr.(*net.TCPAddr)
+
+	if !ok {
+		log.Errorln("Failed turning IpAddr to net.TCPAddr")
+		return
+	}
+
+	gameServer := GameServer{}
+	gameServer.ip = addr.IP.String()
+	gameServer.port = event.Command.Message["PORT"]
+	gameServer.intIP = event.Command.Message["INT-IP"]
+	gameServer.intPort = event.Command.Message["INT-PORT"]
+	gameServer.name = event.Command.Message["NAME"]
+	gameServer.level = event.Command.Message["B-U-map"]
+	gameServer.activePlayers = 0
+	gameServer.maxPlayers, _ = strconv.Atoi(event.Command.Message["MAX-PLAYERS"])
+	gameServer.queueLength = 0
+	gameServer.joiningPlayers = 0
+	gameServer.gameMode = ""
+	gameServer.elo, _ = strconv.ParseFloat(event.Command.Message["B-U-elo_rank"], 64)
+	gameServer.numObservers, _ = strconv.Atoi(event.Command.Message["B-numObservers"])
+	gameServer.maxObservers, _ = strconv.Atoi(event.Command.Message["B-maxObservers"])
+	gameServer.sguid = ""
+	gameServer.hash = ""
+	gameServer.password = ""
+	gameServer.ugid = event.Command.Message["UGID"]
+	gameServer.sType = event.Command.Message["TYPE"]
+	gameServer.join = event.Command.Message["JOIN"]
+	gameServer.version = event.Command.Message["B-version"]
+	gameServer.dataCenter = event.Command.Message["B-U-data_center"]
+	gameServer.serverMap = event.Command.Message["B-U-map"]
+	gameServer.armyBalance = event.Command.Message["B-U-army_balance"]
+	gameServer.armyDistribution = event.Command.Message["B-U-army_distribution"]
+	gameServer.availSlotsNational, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_national"])
+	gameServer.availSlotsRoyal, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_royal"])
+	gameServer.avgAllyRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_ally_rank"], 64)
+	gameServer.avgAxisRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_axis_rank"], 64)
+	gameServer.serverState = event.Command.Message["B-U-server_state"]
+	gameServer.communityName = event.Command.Message["B-U-community_name"]
+
+	GameServers = append(GameServers, gameServer)
+
+	answerPacket := make(map[string]string)
+	answerPacket["MAX-PLAYERS"] = "16"
+	answerPacket["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d"
+	answerPacket["UGID"] = event.Command.Message["UGID"]
+	answerPacket["JOIN"] = event.Command.Message["JOIN"]
+	answerPacket["LID"] = "1"
+	answerPacket["SECRET"] = "4l94N6Y0A3Il3+kb55pVfK6xRjc+Z6sGNuztPeNGwN5CMwC7ZlE/lwel07yciyZ5y3bav7whbzHugPm11NfuBg%3d%3d"
+	answerPacket["J"] = event.Command.Message["JOIN"]
+	answerPacket["GID"] = "1"
+	event.Client.WriteFESL("CGAM", answerPacket, 0x0)
+	tM.logAnswer("CGAM", answerPacket, 0x0)
+}
+
 func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -83,65 +236,79 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	}
 
 	answerPacket := make(map[string]string)
+	answerPacket["QPOS"] = "1"
+	answerPacket["QLEN"] = "1"
+	answerPacket["LID"] = event.Command.Message["LID"]
+	answerPacket["GID"] = event.Command.Message["GID"]
+	event.Client.WriteFESL("QLEN", answerPacket, 0x0)
+
+	answerPacket = make(map[string]string)
+	tid, _ := strconv.Atoi(event.Command.Message["TID"])
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
-	answerPacket["TYPE"] = "G"
 
-	answerPacket["N"] = "hostname"
-	answerPacket["I"] = "127.0.0.1"
-	answerPacket["P"] = "18567"
+	answerPacket["HU"] = "heroes.server.s"
+	answerPacket["HN"] = "1"
 
+	answerPacket["I"] = GameServers[0].ip
+	answerPacket["P"] = GameServers[0].port
+	answerPacket["N"] = GameServers[0].name
+	answerPacket["AP"] = strconv.Itoa(GameServers[0].activePlayers)
+	answerPacket["MP"] = strconv.Itoa(GameServers[0].maxPlayers)
+	answerPacket["QP"] = strconv.Itoa(GameServers[0].queueLength)
+	answerPacket["JP"] = strconv.Itoa(GameServers[0].joiningPlayers)
 	answerPacket["PL"] = "PC"
-	answerPacket["V"] = "1.0"
-
-	answerPacket["GN"] = "ServerName"
-	answerPacket["HU"] = event.Command.Message["GID"] // ServerID
-
-	answerPacket["J"] = "0"
-	answerPacket["JP"] = "0" // joining players?
-	answerPacket["AP"] = "0"
-	answerPacket["MP"] = "16"
 
 	answerPacket["PW"] = "0"
-	answerPacket["QP"] = "0"
+	answerPacket["TYPE"] = GameServers[0].sType
+	answerPacket["J"] = GameServers[0].join
 
 	answerPacket["B-version"] = "1.89.239937.0"
-	answerPacket["B-numObservers"] = "0"
+	answerPacket["V"] = GameServers[0].version
+	answerPacket["B-U-map"] = GameServers[0].serverMap
+	answerPacket["B-U-alwaysQueue"] = "1"
+	answerPacket["B-U-army_balance"] = "Balanced"
+	answerPacket["B-U-army_distribution"] = "\"0,0,0, 0,0,0,0, 0,0,0,0\""
+	answerPacket["B-U-avail_slots_national"] = "yes"
+	answerPacket["B-U-avail_slots_royal"] = "yes"
+	answerPacket["B-U-avg_ally_rank"] = "1000.0000"
+	answerPacket["B-U-avg_axis_rank"] = "1000.0000"
+	answerPacket["B-U-community_name"] = "\"Heroes SV\""
+	answerPacket["B-U-data_center"] = "iad"
+	answerPacket["B-U-elo_rank"] = "1000.0000"
+	answerPacket["B-U-map"] = "no_vehicles"
+	answerPacket["B-U-percent_full"] = "0"
+	answerPacket["B-U-server_ip"] = "169.254.89.46"
+	answerPacket["B-U-server_port"] = "18567"
+	answerPacket["B-U-server_state"] = "empty"
 	answerPacket["B-maxObservers"] = "0"
-	answerPacket["B-maxGameSize"] = "16"
-	answerPacket["B-U-Character"] = "1"
-	answerPacket["B-U-AcceptType"] = "2"
-	answerPacket["B-U-FriendlyFire"] = "0"
-	answerPacket["B-U-IsDLC"] = "0"
-	answerPacket["B-U-UseVoice"] = "0"
-	answerPacket["B-U-Duration"] = "2458"
-	answerPacket["B-U-Map"] = "village"
-	answerPacket["B-U-DlcMapId"] = "0"
-	answerPacket["B-U-Mission"] = "PmcCon001"
-	answerPacket["B-U-Money"] = "181000"
-	answerPacket["B-U-Oil"] = "125"
-	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
-	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
+	answerPacket["B-numObservers"] = "0"
+	answerPacket["B-version"] = "1.02.1067.0"
+	event.Client.WriteFESL("GDAT", answerPacket, 0x0)
 
 	answerPacket = make(map[string]string)
-	answerPacket["TID"] = event.Command.Message["TID"]
+	answerPacket["TID"] = strconv.Itoa(tid + 1)
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
-	answerPacket["GUID"] = ""
+	answerPacket["UGID"] = GameServers[0].ugid
+
 	event.Client.WriteFESL("GDET", answerPacket, 0x0)
-	tM.logAnswer("GDET", answerPacket, 0x0)
+}
 
-	answerPacket = make(map[string]string)
-	answerPacket["TID"] = event.Command.Message["TID"]
-	answerPacket["LID"] = event.Command.Message["LID"]
-	answerPacket["GID"] = event.Command.Message["GID"]
-	answerPacket["NAME"] = "ServerName"
-	answerPacket["UID"] = event.Command.Message["GID"]
-	answerPacket["PID"] = "1"
-	event.Client.WriteFESL("PDAT", answerPacket, 0x0)
-	tM.logAnswer("PDAT", answerPacket, 0x0)
+func (tM *TheaterManager) LogCommandUDP(event *gs.CommandFESL) {
+	b, err := json.MarshalIndent(event.Message, "", "	")
+	if err != nil {
+		panic(err)
+	}
 
+	commandType := "request"
+
+	os.MkdirAll("./commands/"+event.Query+"."+event.Message["TXN"]+"", 0777)
+	err = ioutil.WriteFile("./commands/"+event.Query+"."+event.Message["TXN"]+"/"+commandType, b, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (tM *TheaterManager) LogCommand(event gs.EventClientFESLCommand) {

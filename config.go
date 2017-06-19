@@ -8,18 +8,17 @@ import (
 )
 
 type Config struct {
-	MysqlServer        string
-	MysqlUser          string
-	MysqlDb            string
-	MysqlPw            string
-	MysqlLoggingServer string
-	MysqlLoggingUser   string
-	MysqlLoggingDb     string
-	MysqlLoggingPw     string
-	InfluxDBHost       string
-	InfluxDBDatabase   string
-	InfluxDBUser       string
-	InfluxDBPassword   string
+	MysqlServer      string
+	MysqlUser        string
+	MysqlDb          string
+	MysqlPw          string
+	RedisServer      string
+	RedisPassword    string
+	RedisDB          int
+	InfluxDBHost     string
+	InfluxDBDatabase string
+	InfluxDBUser     string
+	InfluxDBPassword string
 }
 
 func (config *Config) Parse(data []byte) error {

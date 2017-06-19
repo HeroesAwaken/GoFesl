@@ -1,6 +1,6 @@
 {
 	"TXN": "NuLookupUserInfo",
 	"userInfo.0.userName": "MakaHost",
-	"userInfo.1.userName": "MakaHost2",
+	"userInfo.1.userName": "MakaHost_Test",
 	"userInfo.[]": "2"
 }

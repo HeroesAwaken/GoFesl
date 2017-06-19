@@ -1,8 +1,7 @@
 {
 	"TXN": "NuLogin",
-	"displayName": "MakaHost",
-	"entitledGameFeatureWrappers.entitlementExpirationDate": "",
-	"entitledGameFeatureWrappers.message": "",
-	"entitledGameFeatureWrappers.status": "0",
-	"entitlementExpirationDays": "-1"
+	"lkey": "9bdbfacb6e77c5229f33a727cb580978",
+	"nuid": "MakaHost",
+	"profileId": "1817675496",
+	"userId": "1817675496"
 }

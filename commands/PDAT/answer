@@ -1,8 +1,8 @@
 {
-	"GID": "0",
-	"LID": "0",
+	"GID": "1",
+	"LID": "1",
 	"NAME": "ServerName",
 	"PID": "1",
 	"TID": "3",
-	"UID": "0"
+	"UID": "1"
 }

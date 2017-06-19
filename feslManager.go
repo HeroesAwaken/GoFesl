@@ -1,18 +1,24 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
 	log "github.com/ReviveNetwork/GoRevive/Log"
+	"github.com/ReviveNetwork/GoRevive/core"
+	"github.com/go-redis/redis"
 )
 
 type FeslManager struct {
 	name          string
+	db            *sql.DB
+	redis         *redis.Client
 	socket        *gs.SocketTLS
 	eventsChannel chan gs.SocketEvent
 	batchTicker   *time.Ticker
@@ -21,10 +27,12 @@ type FeslManager struct {
 }
 
 // New creates and starts a new ClientManager
-func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool) {
+func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client) {
 	var err error
 
 	fM.socket = new(gs.SocketTLS)
+	fM.db = db
+	fM.redis = redis
 	fM.name = name
 	fM.eventsChannel, err = fM.socket.New(fM.name, port, certFile, keyFile)
 	fM.stopTicker = make(chan bool, 1)
@@ -110,6 +118,7 @@ func (fM *FeslManager) logAnswer(msgType string, msgContent map[string]string, m
 	}
 }
 
+// Not being used right now
 func (fM *FeslManager) GetTelemetryToken(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -138,15 +147,15 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	answerPacket["sessionState"] = "COMPLETE"
 	answerPacket["props.{}"] = "3"
-	answerPacket["props.{resultType}"] = "LIST"
-	answerPacket["props.{availableServerCount}"] = "0"
+	answerPacket["props.{resultType}"] = "JOIN"
+	answerPacket["props.{availableServerCount}"] = "1"
 	answerPacket["props.{avgFit}"] = "100"
 
 	answerPacket["props.{games}.[]"] = "1"
-	answerPacket["props.{games}.0.lid"] = "0"
-	answerPacket["props.{games}.0.gid"] = "0"
-	answerPacket["props.{games}.0.fit"] = "0"
-	answerPacket["props.{games}.0.avgFit"] = "0"
+	answerPacket["props.{games}.0.lid"] = "1"
+	answerPacket["props.{games}.0.gid"] = "1"
+	answerPacket["props.{games}.0.fit"] = "1"
+	answerPacket["props.{games}.0.avgFit"] = "1"
 	/*
 		answerPacket["props.{games}.1.lid"] = "2"
 		answerPacket["props.{games}.1.fit"] = "100"
@@ -174,6 +183,16 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 	fM.Status(event)
 }
 
+func MysqlRealEscapeString(value string) string {
+	replace := map[string]string{"\\": "\\\\", "'": `\'`, "\\0": "\\\\0", "\n": "\\n", "\r": "\\r", `"`: `\"`, "\x1a": "\\Z"}
+
+	for b, a := range replace {
+		value = strings.Replace(value, b, a, -1)
+	}
+
+	return value
+}
+
 func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -183,8 +202,35 @@ func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 	answerPacket := event.Command.Message
 	answerPacket["TXN"] = "UpdateStats"
 
-	answerPacket["u.0.s.1.k"] = "c_wallet_hero"
-	answerPacket["u.0.s.1.v"] = "5"
+	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
+	for i := 0; i < users; i++ {
+		query := ""
+		owner, ok := event.Command.Message["u."+strconv.Itoa(i)+".o"]
+
+		if !ok {
+			return
+		}
+
+		statsNum, _ := strconv.Atoi(event.Command.Message["u."+strconv.Itoa(i)+".s.[]"])
+		for j := 0; j < statsNum; j++ {
+			if event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"] != "" {
+				query += event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"] + "='" + MysqlRealEscapeString(event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]) + "', "
+			} else {
+				query += event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"] + "='" + MysqlRealEscapeString(event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]) + "', "
+			}
+		}
+
+		if owner != "0" && owner != event.Client.RedisState.Get("uID") {
+			sql := "UPDATE `revive_heroes_stats` SET " + query + "pid=" + owner + " WHERE pid = " + owner + ""
+			_, err := fM.db.Exec(sql)
+			if err != nil {
+				log.Errorln(err)
+			}
+		} else {
+			log.Noteln("Owner query:" + query)
+		}
+	}
+
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
@@ -224,26 +270,110 @@ func (fM *FeslManager) NuLoginPersona(event gs.EventClientTLSCommand) {
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLoginPersona"
-	loginPacket["lkey"] = "12345"
-	loginPacket["profileId"] = "1"
-	loginPacket["userId"] = "1"
+	loginPacket["lkey"] = event.Client.RedisState.Get("keyHash")
+	loginPacket["profileId"] = event.Client.RedisState.Get("uID")
+	loginPacket["userId"] = event.Client.RedisState.Get("uID")
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
+// Done with redis CLIENT
 func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return
 	}
 
+	if event.Client.RedisState.Get("clientType") == "server" {
+		// Server login
+		stmt, err := fM.db.Prepare("SELECT t1.id, t2.username, t2.id  FROM revive_heroes_servers t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.secretKey = ?")
+		defer stmt.Close()
+		if err != nil {
+			log.Debugln(err)
+			return
+		}
+
+		var sID, uID int
+		var username string
+
+		err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&sID, &username, &uID)
+		if err != nil {
+			loginPacket := make(map[string]string)
+			loginPacket["TXN"] = "NuLogin"
+			loginPacket["localizedMessage"] = "\"The password the user specified is incorrect\""
+			loginPacket["errorContainer.[]"] = "0"
+			loginPacket["errorCode"] = "122"
+			event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+			return
+		}
+
+		saveRedis := make(map[string]interface{})
+		saveRedis["uID"] = strconv.Itoa(uID)
+		saveRedis["username"] = username
+		saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
+		event.Client.RedisState.SetM(saveRedis)
+
+		loginPacket := make(map[string]string)
+		loginPacket["TXN"] = "NuLogin"
+		loginPacket["profileId"] = strconv.Itoa(uID)
+		loginPacket["userId"] = strconv.Itoa(uID)
+		loginPacket["nuid"] = username
+		loginPacket["lkey"] = event.Command.Message["encryptedInfo"]
+		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+		return
+	}
+
+	stmt, err := fM.db.Prepare("SELECT t1.uid, t1.sessionid, t1.ip, t2.username, t2.banned, t2.is_admin, t2.is_tester, t2.confirmed_em, t2.key_hash, t2.email, t2.country FROM web_sessions t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.sessionid = ?")
+	defer stmt.Close()
+	if err != nil {
+		log.Debugln(err)
+		return
+	}
+
+	var uID int
+	var ip, username, sessionID, keyHash, email, country string
+	var banned, isAdmin, isTester, confirmedEm bool
+
+	err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&uID, &sessionID, &ip, &username, &banned, &isAdmin, &isTester, &confirmedEm, &keyHash, &email, &country)
+	if err != nil {
+		loginPacket := make(map[string]string)
+		loginPacket["TXN"] = "NuLogin"
+		loginPacket["localizedMessage"] = "\"The password the user specified is incorrect\""
+		loginPacket["errorContainer.[]"] = "0"
+		loginPacket["errorCode"] = "122"
+		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+		return
+	}
+
+	// Currently only allow admins & testers
+	if sessionID != event.Command.Message["encryptedInfo"] || !confirmedEm || banned || (!isAdmin && !isTester) {
+		log.Noteln("User not worthy: " + username)
+		loginPacket := make(map[string]string)
+		loginPacket["TXN"] = "NuLogin"
+		loginPacket["localizedMessage"] = "\"The user is not entitled to access this game\""
+		loginPacket["errorContainer.[]"] = "0"
+		loginPacket["errorCode"] = "120"
+		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+		return
+	}
+
+	saveRedis := make(map[string]interface{})
+	saveRedis["uID"] = strconv.Itoa(uID)
+	saveRedis["username"] = username
+	saveRedis["ip"] = ip
+	saveRedis["sessionID"] = sessionID
+	saveRedis["keyHash"] = keyHash
+	saveRedis["email"] = email
+	saveRedis["country"] = country
+	event.Client.RedisState.SetM(saveRedis)
+
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLogin"
-	loginPacket["displayName"] = "MakaHost"
-	loginPacket["entitledGameFeatureWrappers.status"] = "0"
-	loginPacket["entitledGameFeatureWrappers.message"] = ""
-	loginPacket["entitledGameFeatureWrappers.entitlementExpirationDate"] = ""
-	loginPacket["entitlementExpirationDays"] = "-1"
+	loginPacket["profileId"] = strconv.Itoa(uID)
+	loginPacket["userId"] = strconv.Itoa(uID)
+	loginPacket["nuid"] = username
+	loginPacket["lkey"] = keyHash
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -254,20 +384,45 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	userNames := []interface{}{}
+	keys, _ := strconv.Atoi(event.Command.Message["userInfo.[]"])
+	for i := 0; i < keys; i++ {
+		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
+	}
+
+	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
+	defer stmt.Close()
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	rows, err := stmt.Query(userNames...)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
 	personaPacket := make(map[string]string)
 	personaPacket["TXN"] = "NuLookupUserInfo"
-	personaPacket["user"] = "1"
-	personaPacket["userInfo.[]"] = "2"
-	personaPacket["userInfo.0.userName"] = "MakaHost"
-	personaPacket["userInfo.0.userId"] = "1"
-	personaPacket["userInfo.0.xuid"] = "1"
-	personaPacket["userInfo.0.masterUserId"] = "1"
-	personaPacket["userInfo.0.namespace"] = "MAIN"
-	personaPacket["userInfo.1.userName"] = "MakaHost2"
-	personaPacket["userInfo.1.userId"] = "2"
-	personaPacket["userInfo.1.xuid"] = "1"
-	personaPacket["userInfo.1.masterUserId"] = "1"
-	personaPacket["userInfo.1.namespace"] = "MAIN"
+	var k = 0
+	for rows.Next() {
+		var nickname, webId, pid string
+		err := rows.Scan(&nickname, &webId, &pid)
+		if err != nil {
+			return
+		}
+
+		personaPacket["userInfo."+strconv.Itoa(k)+".userName"] = nickname
+		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
+		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = webId
+		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
+
+		k++
+	}
+	//personaPacket["user"] = "1"
+	personaPacket["userInfo.[]"] = strconv.Itoa(k)
+
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
@@ -278,11 +433,38 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
+	defer stmt.Close()
+	if err != nil {
+		return
+	}
+
+	rows, err := stmt.Query(event.Client.RedisState.Get("uID"), "heroes")
+	if err != nil {
+		return
+	}
+
 	personaPacket := make(map[string]string)
 	personaPacket["TXN"] = "NuGetPersonas"
-	personaPacket["personas.0"] = "MakaHost"
-	personaPacket["personas.1"] = "MakaHost2"
-	personaPacket["personas.[]"] = "2"
+
+	var i = 0
+	for rows.Next() {
+		var username string
+		var pid int
+		err := rows.Scan(&username, &pid)
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+		personaPacket["personas."+strconv.Itoa(i)] = username
+		event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), strconv.Itoa(pid))
+		i++
+	}
+
+	event.Client.RedisState.Set("numOfHeroes", strconv.Itoa(i))
+
+	personaPacket["personas.[]"] = strconv.Itoa(i)
+
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
@@ -295,16 +477,16 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuGetAccount"
-	loginPacket["heroName"] = "MakaHost"
-	loginPacket["nuid"] = "max@bosse.io"
+	loginPacket["heroName"] = event.Client.RedisState.Get("username")
+	loginPacket["nuid"] = event.Client.RedisState.Get("email")
 	loginPacket["DOBDay"] = "1"
 	loginPacket["DOBMonthg"] = "1"
 	loginPacket["DOBYear"] = "2017"
-	loginPacket["userId"] = "1"
+	loginPacket["userId"] = event.Client.RedisState.Get("uID")
 	loginPacket["globalOptin"] = "0"
 	loginPacket["thidPartyOptin"] = "0"
 	loginPacket["language"] = "en"
-	loginPacket["country"] = "DE"
+	loginPacket["country"] = event.Client.RedisState.Get("country")
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -314,61 +496,82 @@ func (fM *FeslManager) GetStatsForOwners(event gs.EventClientTLSCommand) {
 		log.Noteln("Client left")
 		return
 	}
+
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "GetStats"
 
-	loginPacket["stats.[]"] = "2"
-	loginPacket["stats.0.ownerId"] = "1"
-	loginPacket["stats.0.ownerType"] = "1"
-	loginPacket["stats.0.stats.[]"] = "11"
-	loginPacket["stats.0.stats.0.key"] = "elo"
-	loginPacket["stats.0.stats.0.value"] = "1"
-	loginPacket["stats.0.stats.1.key"] = "xp"
-	loginPacket["stats.0.stats.1.value"] = "500"
-	loginPacket["stats.0.stats.2.key"] = "level"
-	loginPacket["stats.0.stats.2.value"] = "2"
-	loginPacket["stats.0.stats.3.key"] = "c_apr"
-	loginPacket["stats.0.stats.3.value"] = "3"
-	loginPacket["stats.0.stats.4.key"] = "c_fhrs"
-	loginPacket["stats.0.stats.4.value"] = "0"
-	loginPacket["stats.0.stats.5.key"] = "c_hrs"
-	loginPacket["stats.0.stats.5.value"] = "0"
-	loginPacket["stats.0.stats.6.key"] = "c_hrc"
-	loginPacket["stats.0.stats.6.value"] = "0"
-	loginPacket["stats.0.stats.7.key"] = "c_skc"
-	loginPacket["stats.0.stats.7.value"] = "0"
-	loginPacket["stats.0.stats.8.key"] = "c_ft"
-	loginPacket["stats.0.stats.8.value"] = "0"
-	loginPacket["stats.0.stats.9.key"] = "c_kit"
-	loginPacket["stats.0.stats.9.value"] = "0"
-	loginPacket["stats.0.stats.10.key"] = "c_team"
-	loginPacket["stats.0.stats.10.value"] = "1"
+	// Get the owner pids from redis
+	numOfHeroes := event.Client.RedisState.Get("numOfHeroes")
+	numOfHeroesInt, err := strconv.Atoi(numOfHeroes)
+	if err != nil {
+		return
+	}
 
-	loginPacket["stats.1.ownerId"] = "2"
-	loginPacket["stats.1.ownerType"] = "1"
-	loginPacket["stats.1.stats.[]"] = "11"
-	loginPacket["stats.1.stats.0.key"] = "elo"
-	loginPacket["stats.1.stats.0.value"] = "2"
-	loginPacket["stats.1.stats.1.key"] = "xp"
-	loginPacket["stats.1.stats.1.value"] = "5000"
-	loginPacket["stats.1.stats.2.key"] = "level"
-	loginPacket["stats.1.stats.2.value"] = "1"
-	loginPacket["stats.1.stats.3.key"] = "c_apr"
-	loginPacket["stats.1.stats.3.value"] = "1"
-	loginPacket["stats.1.stats.4.key"] = "c_fhrs"
-	loginPacket["stats.1.stats.4.value"] = "1"
-	loginPacket["stats.1.stats.5.key"] = "c_hrs"
-	loginPacket["stats.1.stats.5.value"] = "1"
-	loginPacket["stats.1.stats.6.key"] = "c_hrc"
-	loginPacket["stats.1.stats.6.value"] = "1"
-	loginPacket["stats.1.stats.7.key"] = "c_skc"
-	loginPacket["stats.1.stats.7.value"] = "1"
-	loginPacket["stats.1.stats.8.key"] = "c_ft"
-	loginPacket["stats.1.stats.8.value"] = "1"
-	loginPacket["stats.1.stats.9.key"] = "c_kit"
-	loginPacket["stats.1.stats.9.value"] = "1"
-	loginPacket["stats.1.stats.10.key"] = "c_team"
-	loginPacket["stats.1.stats.10.value"] = "2"
+	pids := []interface{}{}
+	for i := 1; i <= numOfHeroesInt; i++ {
+		pids = append(pids, event.Client.RedisState.Get("ownerId."+strconv.Itoa(i)))
+	}
+
+	// TODO
+	// Check for mysql injection
+	var query string
+	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
+	for i := 0; i < keys; i++ {
+		query += event.Command.Message["keys."+strconv.Itoa(i)+""] + ", "
+	}
+
+	// Result is your slice string.
+	rawResult := make([][]byte, keys+1)
+	result := make([]string, keys+1)
+
+	dest := make([]interface{}, keys+1) // A temporary interface{} slice
+	for i, _ := range rawResult {
+		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
+	}
+
+	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM revive_heroes_stats WHERE pid IN (?" + strings.Repeat(",?", len(pids)-1) + ")")
+	defer stmt.Close()
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	rows, err := stmt.Query(pids...)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	var k = 0
+	for rows.Next() {
+		err := rows.Scan(dest...)
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+
+		for i, raw := range rawResult {
+			if raw == nil {
+				result[i] = "\\N"
+			} else {
+				result[i] = string(raw)
+			}
+		}
+
+		keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
+
+		loginPacket["stats."+strconv.Itoa(k)+".ownerId"] = result[len(result)-1]
+		loginPacket["stats."+strconv.Itoa(k)+".ownerType"] = "1"
+		loginPacket["stats."+strconv.Itoa(k)+".stats.[]"] = event.Command.Message["keys.[]"]
+		for i := 0; i < keys; i++ {
+			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
+			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".value"] = result[i]
+			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".text"] = result[i]
+		}
+		k++
+	}
+
+	loginPacket["stats.[]"] = strconv.Itoa(k)
 
 	event.Client.WriteFESL(event.Command.Query, loginPacket, 0xC0000007)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
@@ -382,26 +585,171 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "GetStats"
-	loginPacket["ownerId"] = event.Command.Message["owner"]
-	loginPacket["ownerType"] = "1"
-	loginPacket["periodPast"] = "0"
-	loginPacket["periodId"] = "0"
 
-	loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
+	owner := event.Command.Message["owner"]
+
+	// TODO
+	// Check for mysql injection
+	var query string
 	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
 	for i := 0; i < keys; i++ {
-		loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
-		loginPacket["stats."+strconv.Itoa(i)+".value"] = "99.0"
+		query += event.Command.Message["keys."+strconv.Itoa(i)+""] + ", "
 	}
-	/*
-		loginPacket["stats.[]"] = event.Command.Message["stats.[]"]
-		loginPacket["stats.0.key"] = "c_ltm"
-		loginPacket["stats.0.value"] = "1"
-		loginPacket["stats.1.key"] = "c_slm"
-		loginPacket["stats.1.value"] = "1"
-		loginPacket["stats.1.key"] = "c_tut"
-		loginPacket["stats.1.value"] = "1"
-	*/
+
+	// Result is your slice string.
+	rawResult := make([][]byte, keys+1)
+	result := make([]string, keys+1)
+
+	dest := make([]interface{}, keys+1) // A temporary interface{} slice
+	for i, _ := range rawResult {
+		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
+	}
+
+	// Owner==0 is for accounts-stats.
+	// Otherwise hero-stats
+	if owner == "0" || owner == event.Client.RedisState.Get("uID") {
+		stmt, err := fM.db.Prepare("SELECT " + query + "uid FROM revive_heroes_accounts WHERE uid = ?")
+		defer stmt.Close()
+		if err != nil {
+			log.Errorln(err)
+
+			// DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
+			// Creates a missing column
+
+			var columns []string
+			keys, _ = strconv.Atoi(event.Command.Message["keys.[]"])
+			for i := 0; i < keys; i++ {
+				columns = append(columns, event.Command.Message["keys."+strconv.Itoa(i)+""])
+			}
+
+			for _, column := range columns {
+				log.Debugln("Checking column " + column)
+				stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"revive_heroes_accounts\" AND COLUMN_NAME = \"" + column + "\"")
+				defer stmt2.Close()
+				if err != nil {
+				}
+				var count int
+				err = stmt2.QueryRow().Scan(&count)
+				if err != nil {
+				}
+
+				if count == 0 {
+					log.Debugln("Creating column " + column)
+					// If we land here, the column doesn't exist, so create it
+
+					_, err := fM.db.Exec("ALTER TABLE `revive_heroes_accounts` ADD COLUMN `" + column + "` TEXT NOT NULL")
+					if err != nil {
+					}
+				}
+			}
+
+			//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
+			return
+		}
+
+		err = stmt.QueryRow(event.Client.RedisState.Get("uID")).Scan(dest...)
+		if err != nil {
+			log.Debugln(err)
+			return
+		}
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+
+		for i, raw := range rawResult {
+			if raw == nil {
+				result[i] = "\\N"
+			} else {
+				result[i] = string(raw)
+			}
+		}
+
+		loginPacket["ownerId"] = result[len(result)-1]
+		loginPacket["ownerType"] = "1"
+		loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
+		for i := 0; i < keys; i++ {
+			loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
+			loginPacket["stats."+strconv.Itoa(i)+".value"] = result[i]
+		}
+
+		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+
+		return
+	}
+
+	// DO the same as above but for hero-stats instead of hero-account
+
+	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM revive_heroes_stats WHERE pid = ?")
+
+	defer stmt.Close()
+	if err != nil {
+		log.Errorln(err)
+
+		// DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
+		// Creates a missing column
+
+		var columns []string
+		keys, _ = strconv.Atoi(event.Command.Message["keys.[]"])
+		for i := 0; i < keys; i++ {
+			columns = append(columns, event.Command.Message["keys."+strconv.Itoa(i)+""])
+		}
+
+		for _, column := range columns {
+			log.Debugln("Checking column " + column)
+			stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"revive_heroes_stats\" AND COLUMN_NAME = \"" + column + "\"")
+			defer stmt2.Close()
+			if err != nil {
+			}
+			var count int
+			err = stmt2.QueryRow().Scan(&count)
+			if err != nil {
+			}
+
+			if count == 0 {
+				log.Debugln("Creating column " + column)
+				// If we land here, the column doesn't exist, so create it
+
+				sql := "ALTER TABLE `revive_heroes_stats` ADD COLUMN `" + column + "` TEXT NOT NULL"
+				_, err := fM.db.Exec(sql)
+				if err != nil {
+					log.Errorln(sql)
+					log.Errorln(err)
+				}
+			}
+		}
+
+		//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
+		return
+	}
+
+	err = stmt.QueryRow(owner).Scan(dest...)
+	if err != nil {
+		log.Debugln(err)
+		return
+	}
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	for i, raw := range rawResult {
+		if raw == nil {
+			result[i] = "\\N"
+		} else {
+			result[i] = string(raw)
+		}
+	}
+
+	loginPacket["ownerId"] = result[len(result)-1]
+	loginPacket["ownerType"] = "1"
+	loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
+	for i := 0; i < keys; i++ {
+		loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
+		loginPacket["stats."+strconv.Itoa(i)+".value"] = result[i]
+	}
+
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 
@@ -413,19 +761,40 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 		return
 	}
 
-	getSession := make(map[string]string)
-	getSession["TXN"] = "GetSessionId"
-	event.Client.WriteFESL("gsum", getSession, 0)
+	redisState := new(core.RedisState)
+	redisState.New(fM.redis, event.Command.Message["clientType"]+"-"+event.Client.IpAddr.String())
+
+	event.Client.RedisState = redisState
+
+	if !fM.server {
+		getSession := make(map[string]string)
+		getSession["TXN"] = "GetSessionId"
+		event.Client.WriteFESL("gsum", getSession, 0)
+	}
+
+	saveRedis := make(map[string]interface{})
+	saveRedis["SDKVersion"] = event.Command.Message["SDKVersion"]
+	saveRedis["clientPlatform"] = event.Command.Message["clientPlatform"]
+	saveRedis["clientString"] = event.Command.Message["clientString"]
+	saveRedis["clientType"] = event.Command.Message["clientType"]
+	saveRedis["clientVersion"] = event.Command.Message["clientVersion"]
+	saveRedis["locale"] = event.Command.Message["locale"]
+	saveRedis["sku"] = event.Command.Message["sku"]
+	event.Client.RedisState.SetM(saveRedis)
 
 	helloPacket := make(map[string]string)
 	helloPacket["TXN"] = "Hello"
 	helloPacket["domainPartition.domain"] = "eagames"
-	helloPacket["domainPartition.subDomain"] = "bfwest-dedicated"
+	if fM.server {
+		helloPacket["domainPartition.subDomain"] = "bfwest-server"
+	} else {
+		helloPacket["domainPartition.subDomain"] = "bfwest-dedicated"
+	}
 	helloPacket["curTime"] = "Jun-15-2017 07:26:12 UTC"
 	helloPacket["activityTimeoutSecs"] = "0"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "bfwest-dedicated.theater.ea.com"
+	helloPacket["theaterIp"] = "bfwest-server.theater.ea.com"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {
@@ -474,6 +843,10 @@ func (fM *FeslManager) newClient(event gs.EventNewClientTLS) {
 
 func (fM *FeslManager) close(event gs.EventClientTLSClose) {
 	log.Noteln("Client closed.")
+
+	if event.Client.RedisState != nil {
+		event.Client.RedisState.Delete()
+	}
 
 	if !event.Client.State.HasLogin {
 		return
