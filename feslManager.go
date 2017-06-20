@@ -228,7 +228,11 @@ func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 				log.Errorln(err)
 			}
 		} else {
-			log.Noteln("Owner query:" + query)
+			sql := "UPDATE `revive_heroes_accounts` SET " + query + "uid=" + owner + " WHERE uid = " + owner + ""
+			_, err := fM.db.Exec(sql)
+			if err != nil {
+				log.Errorln(err)
+			}
 		}
 	}
 
@@ -638,7 +642,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 					log.Debugln("Creating column " + column)
 					// If we land here, the column doesn't exist, so create it
 
-					_, err := fM.db.Exec("ALTER TABLE `revive_heroes_accounts` ADD COLUMN `" + column + "` TEXT NOT NULL")
+					_, err := fM.db.Exec("ALTER TABLE `revive_heroes_accounts` ADD COLUMN `" + column + "` TEXT NULL")
 					if err != nil {
 					}
 				}
@@ -712,7 +716,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 				log.Debugln("Creating column " + column)
 				// If we land here, the column doesn't exist, so create it
 
-				sql := "ALTER TABLE `revive_heroes_stats` ADD COLUMN `" + column + "` TEXT NOT NULL"
+				sql := "ALTER TABLE `revive_heroes_stats` ADD COLUMN `" + column + "` TEXT NULL"
 				_, err := fM.db.Exec(sql)
 				if err != nil {
 					log.Errorln(sql)

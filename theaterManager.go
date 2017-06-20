@@ -160,8 +160,8 @@ func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
-	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
-	tM.logAnswer("EGAM", answerPacket, 0x0)
+	event.Client.WriteFESL("ECNL", answerPacket, 0x0)
+	tM.logAnswer("ECNL", answerPacket, 0x0)
 }
 
 func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
@@ -169,11 +169,32 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 		log.Noteln("Client left")
 		return
 	}
+	serverFull := false
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
+
+	gameServer := new(core.RedisState)
+	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
+
+	maxPlayers, _ := strconv.Atoi(gameServer.Get("MAX-PLAYERS"))
+	tmpPlayers, _ := strconv.Atoi(gameServer.Get("ACTIVE-PLAYERS"))
+
+	if tmpPlayers+1 > maxPlayers {
+		// Server is full
+		tmpPlayers, _ := strconv.Atoi(gameServer.Get("QUEUE-LENGTH"))
+		gameServer.Set("QUEUE-LENGTH", strconv.Itoa(tmpPlayers))
+		tmpPlayers++
+		serverFull = true
+	}
+
+	if !serverFull {
+		event.Client.WriteFESL("EGAM", answerPacket, 0x0)
+		tM.logAnswer("EGAM", answerPacket, 0x0)
+	}
+
 	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	tM.logAnswer("EGAM", answerPacket, 0x0)
 }
@@ -275,7 +296,6 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	tM.logAnswer("QLEN", answerPacket, 0x0)
 
 	answerPacket = make(map[string]string)
-	tid, _ := strconv.Atoi(event.Command.Message["TID"])
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
@@ -320,6 +340,7 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	event.Client.WriteFESL("GDAT", answerPacket, 0x0)
 	tM.logAnswer("GDAT", answerPacket, 0x0)
 
+	tid, _ := strconv.Atoi(event.Command.Message["TID"])
 	answerPacket = make(map[string]string)
 	answerPacket["TID"] = strconv.Itoa(tid + 1)
 	answerPacket["LID"] = event.Command.Message["LID"]
@@ -328,6 +349,7 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 
 	event.Client.WriteFESL("GDET", answerPacket, 0x0)
 	tM.logAnswer("GDET", answerPacket, 0x0)
+
 }
 
 func (tM *TheaterManager) LogCommandUDP(event *gs.CommandFESL) {

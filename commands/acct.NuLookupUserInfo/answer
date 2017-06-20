@@ -1,12 +1,4 @@
 {
 	"TXN": "NuLookupUserInfo",
-	"userInfo.0.masterUserId": "1817675496",
-	"userInfo.0.namespace": "MAIN",
-	"userInfo.0.userId": "5",
-	"userInfo.0.userName": "MakaHost",
-	"userInfo.1.masterUserId": "1817675496",
-	"userInfo.1.namespace": "MAIN",
-	"userInfo.1.userId": "7",
-	"userInfo.1.userName": "MakaHost_Test",
-	"userInfo.[]": "2"
+	"userInfo.[]": "0"
 }

@@ -16,6 +16,8 @@
 	"owners.0.ownerType": "1",
 	"owners.1.ownerId": "7",
 	"owners.1.ownerType": "1",
-	"owners.[]": "2",
+	"owners.2.ownerId": "8",
+	"owners.2.ownerType": "1",
+	"owners.[]": "3",
 	"periodId": "0"
 }
