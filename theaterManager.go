@@ -11,6 +11,7 @@ import (
 
 	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
 	log "github.com/ReviveNetwork/GoRevive/Log"
+	"github.com/ReviveNetwork/GoRevive/core"
 	"github.com/go-redis/redis"
 )
 
@@ -58,6 +59,7 @@ type TheaterManager struct {
 	eventsChannelUDP chan gs.SocketUDPEvent
 	batchTicker      *time.Ticker
 	stopTicker       chan bool
+	gameServerGlobal *core.RedisState
 }
 
 // New creates and starts a new ClientManager
@@ -78,6 +80,10 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 		log.Errorln(err)
 	}
 	tM.stopTicker = make(chan bool, 1)
+
+	tM.gameServerGlobal = new(core.RedisState)
+	tM.gameServerGlobal.New(tM.redis, "gameServer-config")
+	tM.gameServerGlobal.Set("Lobbies", "0")
 
 	go tM.run()
 }
@@ -113,6 +119,10 @@ func (tM *TheaterManager) run() {
 				go tM.ECNL(event.Data.(gs.EventClientFESLCommand))
 			case event.Name == "client.command.CGAM":
 				go tM.CGAM(event.Data.(gs.EventClientFESLCommand))
+			case event.Name == "client.command.UBRA":
+				go tM.UBRA(event.Data.(gs.EventClientFESLCommand))
+			case event.Name == "client.command.UGAM":
+				go tM.UGAM(event.Data.(gs.EventClientFESLCommand))
 			case event.Name == "client.command":
 				tM.LogCommand(event.Data.(gs.EventClientFESLCommand))
 				log.Debugf("Got event %s: %v", event.Name, event.Data.(gs.EventClientFESLCommand).Command)
@@ -180,53 +190,71 @@ func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 		log.Errorln("Failed turning IpAddr to net.TCPAddr")
 		return
 	}
+	/*
+		gameServer := GameServer{}
+		gameServer.ip = addr.IP.String()
+		gameServer.port = event.Command.Message["PORT"]
+		gameServer.intIP = event.Command.Message["INT-IP"]
+		gameServer.intPort = event.Command.Message["INT-PORT"]
+		gameServer.name = event.Command.Message["NAME"]
+		gameServer.level = event.Command.Message["B-U-map"]
+		gameServer.activePlayers = 0
+		gameServer.maxPlayers, _ = strconv.Atoi(event.Command.Message["MAX-PLAYERS"])
+		gameServer.queueLength = 0
+		gameServer.joiningPlayers = 0
+		gameServer.gameMode = ""
+		gameServer.elo, _ = strconv.ParseFloat(event.Command.Message["B-U-elo_rank"], 64)
+		gameServer.numObservers, _ = strconv.Atoi(event.Command.Message["B-numObservers"])
+		gameServer.maxObservers, _ = strconv.Atoi(event.Command.Message["B-maxObservers"])
+		gameServer.sguid = ""
+		gameServer.hash = ""
+		gameServer.password = ""
+		gameServer.ugid = event.Command.Message["UGID"]
+		gameServer.sType = event.Command.Message["TYPE"]
+		gameServer.join = event.Command.Message["JOIN"]
+		gameServer.version = event.Command.Message["B-version"]
+		gameServer.dataCenter = event.Command.Message["B-U-data_center"]
+		gameServer.serverMap = event.Command.Message["B-U-map"]
+		gameServer.armyBalance = event.Command.Message["B-U-army_balance"]
+		gameServer.armyDistribution = event.Command.Message["B-U-army_distribution"]
+		gameServer.availSlotsNational, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_national"])
+		gameServer.availSlotsRoyal, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_royal"])
+		gameServer.avgAllyRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_ally_rank"], 64)
+		gameServer.avgAxisRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_axis_rank"], 64)
+		gameServer.serverState = event.Command.Message["B-U-server_state"]
+		gameServer.communityName = event.Command.Message["B-U-community_name"]
+	*/
 
-	gameServer := GameServer{}
-	gameServer.ip = addr.IP.String()
-	gameServer.port = event.Command.Message["PORT"]
-	gameServer.intIP = event.Command.Message["INT-IP"]
-	gameServer.intPort = event.Command.Message["INT-PORT"]
-	gameServer.name = event.Command.Message["NAME"]
-	gameServer.level = event.Command.Message["B-U-map"]
-	gameServer.activePlayers = 0
-	gameServer.maxPlayers, _ = strconv.Atoi(event.Command.Message["MAX-PLAYERS"])
-	gameServer.queueLength = 0
-	gameServer.joiningPlayers = 0
-	gameServer.gameMode = ""
-	gameServer.elo, _ = strconv.ParseFloat(event.Command.Message["B-U-elo_rank"], 64)
-	gameServer.numObservers, _ = strconv.Atoi(event.Command.Message["B-numObservers"])
-	gameServer.maxObservers, _ = strconv.Atoi(event.Command.Message["B-maxObservers"])
-	gameServer.sguid = ""
-	gameServer.hash = ""
-	gameServer.password = ""
-	gameServer.ugid = event.Command.Message["UGID"]
-	gameServer.sType = event.Command.Message["TYPE"]
-	gameServer.join = event.Command.Message["JOIN"]
-	gameServer.version = event.Command.Message["B-version"]
-	gameServer.dataCenter = event.Command.Message["B-U-data_center"]
-	gameServer.serverMap = event.Command.Message["B-U-map"]
-	gameServer.armyBalance = event.Command.Message["B-U-army_balance"]
-	gameServer.armyDistribution = event.Command.Message["B-U-army_distribution"]
-	gameServer.availSlotsNational, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_national"])
-	gameServer.availSlotsRoyal, _ = strconv.ParseBool(event.Command.Message["B-U-avail_slots_royal"])
-	gameServer.avgAllyRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_ally_rank"], 64)
-	gameServer.avgAxisRank, _ = strconv.ParseFloat(event.Command.Message["B-U-avg_axis_rank"], 64)
-	gameServer.serverState = event.Command.Message["B-U-server_state"]
-	gameServer.communityName = event.Command.Message["B-U-community_name"]
+	currentLobbyId := tM.gameServerGlobal.Get("Lobbies")
+	gameLid, _ := strconv.Atoi(currentLobbyId)
+	gameLid++
 
-	GameServers = append(GameServers, gameServer)
+	gameServer := new(core.RedisState)
+	gameServer.New(tM.redis, "gameServer-"+strconv.Itoa(gameLid))
+
+	for index, value := range event.Command.Message {
+		gameServer.Set(index, value)
+	}
+
+	gameServer.Set("LID", strconv.Itoa(gameLid))
+	gameServer.Set("IP", addr.IP.String())
+	gameServer.Set("ACTIVE-PLAYERS", "0")
+	gameServer.Set("QUEUE-LENGTH", "0")
 
 	answerPacket := make(map[string]string)
+	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["MAX-PLAYERS"] = "16"
 	answerPacket["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d"
 	answerPacket["UGID"] = event.Command.Message["UGID"]
 	answerPacket["JOIN"] = event.Command.Message["JOIN"]
-	answerPacket["LID"] = "1"
+	answerPacket["LID"] = strconv.Itoa(gameLid)
 	answerPacket["SECRET"] = "4l94N6Y0A3Il3+kb55pVfK6xRjc+Z6sGNuztPeNGwN5CMwC7ZlE/lwel07yciyZ5y3bav7whbzHugPm11NfuBg%3d%3d"
 	answerPacket["J"] = event.Command.Message["JOIN"]
 	answerPacket["GID"] = "1"
 	event.Client.WriteFESL("CGAM", answerPacket, 0x0)
 	tM.logAnswer("CGAM", answerPacket, 0x0)
+
+	tM.gameServerGlobal.Set("Lobbies", strconv.Itoa(gameLid))
 }
 
 func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
@@ -235,12 +263,16 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 		return
 	}
 
+	gameServer := new(core.RedisState)
+	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
+
 	answerPacket := make(map[string]string)
-	answerPacket["QPOS"] = "1"
+	answerPacket["QPOS"] = "0"
 	answerPacket["QLEN"] = "1"
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
 	event.Client.WriteFESL("QLEN", answerPacket, 0x0)
+	tM.logAnswer("QLEN", answerPacket, 0x0)
 
 	answerPacket = make(map[string]string)
 	tid, _ := strconv.Atoi(event.Command.Message["TID"])
@@ -251,49 +283,51 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	answerPacket["HU"] = "heroes.server.s"
 	answerPacket["HN"] = "1"
 
-	answerPacket["I"] = GameServers[0].ip
-	answerPacket["P"] = GameServers[0].port
-	answerPacket["N"] = GameServers[0].name
-	answerPacket["AP"] = strconv.Itoa(GameServers[0].activePlayers)
-	answerPacket["MP"] = strconv.Itoa(GameServers[0].maxPlayers)
-	answerPacket["QP"] = strconv.Itoa(GameServers[0].queueLength)
-	answerPacket["JP"] = strconv.Itoa(GameServers[0].joiningPlayers)
+	answerPacket["I"] = gameServer.Get("IP")
+	answerPacket["P"] = gameServer.Get("PORT")
+	answerPacket["N"] = gameServer.Get("NAME")
+	answerPacket["AP"] = gameServer.Get("ACTIVE-PLAYERS")
+	answerPacket["MP"] = gameServer.Get("MAX-PLAYERS")
+	answerPacket["QP"] = gameServer.Get("QUEUE-LENGTH")
+	answerPacket["JP"] = gameServer.Get("JOIN")
 	answerPacket["PL"] = "PC"
 
 	answerPacket["PW"] = "0"
-	answerPacket["TYPE"] = GameServers[0].sType
-	answerPacket["J"] = GameServers[0].join
+	answerPacket["TYPE"] = gameServer.Get("TYPE")
+	answerPacket["J"] = gameServer.Get("JOIN")
+
+	answerPacket["V"] = gameServer.Get("B-version")
+	answerPacket["B-U-alwaysQueue"] = gameServer.Get("B-U-alwaysQueue")
+	answerPacket["B-U-army_balance"] = gameServer.Get("B-U-army_balance")
+	answerPacket["B-U-army_distribution"] = gameServer.Get("B-U-army_distribution")
+	answerPacket["B-U-avail_slots_national"] = gameServer.Get("B-U-avail_slots_national")
+	answerPacket["B-U-avail_slots_royal"] = gameServer.Get("B-U-avail_slots_royal")
+	answerPacket["B-U-avg_ally_rank"] = gameServer.Get("B-U-avg_ally_rank")
+	answerPacket["B-U-avg_axis_rank"] = gameServer.Get("B-U-avg_axis_rank")
+	answerPacket["B-U-community_name"] = gameServer.Get("B-U-community_name")
+	answerPacket["B-U-data_center"] = gameServer.Get("B-U-data_center")
+	answerPacket["B-U-elo_rank"] = gameServer.Get("B-U-elo_rank")
+	answerPacket["B-U-map"] = gameServer.Get("B-U-map")
+	answerPacket["B-U-percent_full"] = gameServer.Get("B-U-percent_full")
+	answerPacket["B-U-server_ip"] = gameServer.Get("B-U-server_ip")
+	answerPacket["B-U-server_port"] = gameServer.Get("B-U-server_port")
+	answerPacket["B-U-server_state"] = gameServer.Get("B-U-server_state")
+	answerPacket["B-maxObservers"] = gameServer.Get("B-maxObservers")
+	answerPacket["B-numObservers"] = gameServer.Get("B-numObservers")
+	answerPacket["B-U-map_name"] = gameServer.Get("B-U-map_name")
 
 	answerPacket["B-version"] = "1.89.239937.0"
-	answerPacket["V"] = GameServers[0].version
-	answerPacket["B-U-map"] = GameServers[0].serverMap
-	answerPacket["B-U-alwaysQueue"] = "1"
-	answerPacket["B-U-army_balance"] = "Balanced"
-	answerPacket["B-U-army_distribution"] = "\"0,0,0, 0,0,0,0, 0,0,0,0\""
-	answerPacket["B-U-avail_slots_national"] = "yes"
-	answerPacket["B-U-avail_slots_royal"] = "yes"
-	answerPacket["B-U-avg_ally_rank"] = "1000.0000"
-	answerPacket["B-U-avg_axis_rank"] = "1000.0000"
-	answerPacket["B-U-community_name"] = "\"Heroes SV\""
-	answerPacket["B-U-data_center"] = "iad"
-	answerPacket["B-U-elo_rank"] = "1000.0000"
-	answerPacket["B-U-map"] = "no_vehicles"
-	answerPacket["B-U-percent_full"] = "0"
-	answerPacket["B-U-server_ip"] = "169.254.89.46"
-	answerPacket["B-U-server_port"] = "18567"
-	answerPacket["B-U-server_state"] = "empty"
-	answerPacket["B-maxObservers"] = "0"
-	answerPacket["B-numObservers"] = "0"
-	answerPacket["B-version"] = "1.02.1067.0"
 	event.Client.WriteFESL("GDAT", answerPacket, 0x0)
+	tM.logAnswer("GDAT", answerPacket, 0x0)
 
 	answerPacket = make(map[string]string)
 	answerPacket["TID"] = strconv.Itoa(tid + 1)
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
-	answerPacket["UGID"] = GameServers[0].ugid
+	answerPacket["UGID"] = gameServer.Get("UGID")
 
 	event.Client.WriteFESL("GDET", answerPacket, 0x0)
+	tM.logAnswer("GDET", answerPacket, 0x0)
 }
 
 func (tM *TheaterManager) LogCommandUDP(event *gs.CommandFESL) {
@@ -378,6 +412,35 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 	answerPacket["CID"] = "1"
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
+}
+
+func (tM *TheaterManager) UBRA(event gs.EventClientFESLCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	answerPacket := make(map[string]string)
+	answerPacket["TID"] = event.Command.Message["TID"]
+	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
+	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
+}
+
+func (tM *TheaterManager) UGAM(event gs.EventClientFESLCommand) {
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+
+	gameServer := new(core.RedisState)
+	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
+
+	log.Noteln("Updating GameServer " + event.Command.Message["LID"])
+
+	for index, value := range event.Command.Message {
+		log.Noteln("SET " + index + " " + value)
+		gameServer.Set(index, value)
+	}
 }
 
 func (tM *TheaterManager) CONN(event gs.EventClientFESLCommand) {

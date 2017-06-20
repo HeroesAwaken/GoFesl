@@ -36,8 +36,6 @@ var (
 		MysqlPw:     "",
 	}
 
-	GameServers []GameServer
-
 	mem runtime.MemStats
 )
 
