@@ -41,7 +41,13 @@ var (
 
 func emtpyHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debugln(r.URL.String())
-	fmt.Fprintf(w, "")
+	fmt.Fprintf(w, "<update><status>Online</status><name>Test</name></update>")
+}
+
+func relationship(w http.ResponseWriter, r *http.Request) {
+	log.Noteln(r.URL.String())
+	log.Noteln("<update><status>Online</status><name>Test</name></update>")
+	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>123</realid></update>")
 }
 
 func sessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,8 +59,8 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 		userKey, err := r.Cookie("magma")
 		if err != nil {
 		}
-		log.Noteln("<success><token>" + userKey.Value + "</token></success>")
-		fmt.Fprintf(w, "<success><token>"+userKey.Value+"</token></success>")
+		log.Noteln("<success><token code=\"NEW_TOKEN\">" + userKey.Value + "</token></success>")
+		fmt.Fprintf(w, "<success><token code=\"NEW_TOKEN\">"+userKey.Value+"</token></success>")
 	}
 }
 
@@ -85,6 +91,7 @@ func main() {
 	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
+	r.HandleFunc("/relationships/roster/nucleus:1817675496", relationship)
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {

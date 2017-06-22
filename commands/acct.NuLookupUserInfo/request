@@ -1,5 +1,6 @@
 {
 	"TXN": "NuLookupUserInfo",
-	"userInfo.0.userName": "Current",
-	"userInfo.[]": "1"
+	"userInfo.0.userName": "MakaHost-NCommando",
+	"userInfo.1.userName": "MakaHost-NSoldier",
+	"userInfo.[]": "2"
 }

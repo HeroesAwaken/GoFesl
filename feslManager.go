@@ -143,19 +143,17 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Status"
-	answerPacket["id.id"] = "605"
+	answerPacket["id.id"] = "1"
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	answerPacket["sessionState"] = "COMPLETE"
 	answerPacket["props.{}"] = "3"
 	answerPacket["props.{resultType}"] = "JOIN"
 	answerPacket["props.{availableServerCount}"] = "1"
-	answerPacket["props.{avgFit}"] = "100"
 
 	answerPacket["props.{games}.[]"] = "1"
 	answerPacket["props.{games}.0.lid"] = "1"
 	answerPacket["props.{games}.0.gid"] = "1"
 	answerPacket["props.{games}.0.fit"] = "1"
-	answerPacket["props.{games}.0.avgFit"] = "1"
 	/*
 		answerPacket["props.{games}.1.lid"] = "2"
 		answerPacket["props.{games}.1.fit"] = "100"
@@ -175,7 +173,7 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Start"
-	answerPacket["id.id"] = "605"
+	answerPacket["id.id"] = "1"
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	event.Client.WriteFESL(event.Command.Query, answerPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
@@ -415,6 +413,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		var nickname, webId, pid string
 		err := rows.Scan(&nickname, &webId, &pid)
 		if err != nil {
+			log.Errorln(err)
 			return
 		}
 

@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
@@ -184,6 +185,7 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 
 	if tmpPlayers+1 > maxPlayers {
 		// Server is full
+		log.Noteln("Server full")
 		tmpPlayers, _ := strconv.Atoi(gameServer.Get("QUEUE-LENGTH"))
 		gameServer.Set("QUEUE-LENGTH", strconv.Itoa(tmpPlayers))
 		tmpPlayers++
@@ -288,19 +290,11 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
 
 	answerPacket := make(map[string]string)
-	answerPacket["QPOS"] = "0"
-	answerPacket["QLEN"] = "1"
-	answerPacket["LID"] = event.Command.Message["LID"]
-	answerPacket["GID"] = event.Command.Message["GID"]
-	event.Client.WriteFESL("QLEN", answerPacket, 0x0)
-	tM.logAnswer("QLEN", answerPacket, 0x0)
-
-	answerPacket = make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
 
-	answerPacket["HU"] = "heroes.server.s"
+	answerPacket["HU"] = "bfwest.server.p"
 	answerPacket["HN"] = "1"
 
 	answerPacket["I"] = gameServer.Get("IP")
@@ -308,44 +302,90 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	answerPacket["N"] = gameServer.Get("NAME")
 	answerPacket["AP"] = gameServer.Get("ACTIVE-PLAYERS")
 	answerPacket["MP"] = gameServer.Get("MAX-PLAYERS")
-	answerPacket["QP"] = gameServer.Get("QUEUE-LENGTH")
-	answerPacket["JP"] = gameServer.Get("JOIN")
+	answerPacket["QP"] = "0"
+	answerPacket["JP"] = "0"
 	answerPacket["PL"] = "PC"
 
 	answerPacket["PW"] = "0"
 	answerPacket["TYPE"] = gameServer.Get("TYPE")
 	answerPacket["J"] = gameServer.Get("JOIN")
 
-	answerPacket["V"] = gameServer.Get("B-version")
-	answerPacket["B-U-alwaysQueue"] = gameServer.Get("B-U-alwaysQueue")
-	answerPacket["B-U-army_balance"] = gameServer.Get("B-U-army_balance")
-	answerPacket["B-U-army_distribution"] = gameServer.Get("B-U-army_distribution")
-	answerPacket["B-U-avail_slots_national"] = gameServer.Get("B-U-avail_slots_national")
-	answerPacket["B-U-avail_slots_royal"] = gameServer.Get("B-U-avail_slots_royal")
-	answerPacket["B-U-avg_ally_rank"] = gameServer.Get("B-U-avg_ally_rank")
-	answerPacket["B-U-avg_axis_rank"] = gameServer.Get("B-U-avg_axis_rank")
-	answerPacket["B-U-community_name"] = gameServer.Get("B-U-community_name")
-	answerPacket["B-U-data_center"] = gameServer.Get("B-U-data_center")
-	answerPacket["B-U-elo_rank"] = gameServer.Get("B-U-elo_rank")
-	answerPacket["B-U-map"] = gameServer.Get("B-U-map")
-	answerPacket["B-U-percent_full"] = gameServer.Get("B-U-percent_full")
-	answerPacket["B-U-server_ip"] = gameServer.Get("B-U-server_ip")
-	answerPacket["B-U-server_port"] = gameServer.Get("B-U-server_port")
-	answerPacket["B-U-server_state"] = gameServer.Get("B-U-server_state")
-	answerPacket["B-maxObservers"] = gameServer.Get("B-maxObservers")
-	answerPacket["B-numObservers"] = gameServer.Get("B-numObservers")
-	answerPacket["B-U-map_name"] = gameServer.Get("B-U-map_name")
+	for _, key := range gameServer.HKeys() {
+		if strings.Index(key, "B-") != -1 {
+			answerPacket[key] = gameServer.Get(key)
+		}
+	}
+
+	/*
+		answerPacket["UGID"] = gameServer.Get("UGID")
+		answerPacket["HTTYPE"] = gameServer.Get("HTTYPE")
+		answerPacket["HXFR"] = gameServer.Get("HXFR")
+		answerPacket["RT"] = gameServer.Get("RT")
+		answerPacket["IP"] = gameServer.Get("IP")
+		answerPacket["PORT"] = gameServer.Get("PORT")
+		answerPacket["RESERVE-HOST"] = gameServer.Get("RESERVE-HOST")
+		answerPacket["QLEN"] = "0"
+		answerPacket["SECRET"] = gameServer.Get("SECRET")
+		answerPacket["JOIN"] = gameServer.Get("JOIN")
+		answerPacket["DISABLE-AUTO-DEQUEUE"] = gameServer.Get("DISABLE-AUTO-DEQUEUE")
+		answerPacket["NAME"] = gameServer.Get("NAME")
+		answerPacket["INT-IP"] = gameServer.Get("INT-IP")
+		answerPacket["INT-PORT"] = gameServer.Get("INT-PORT")
+		answerPacket["ACTIVE-PLAYERS"] = gameServer.Get("ACTIVE-PLAYERS")
+		answerPacket["QUEUE-LENGTH"] = gameServer.Get("QUEUE-LENGTH")
+		answerPacket["MAX-PLAYERS"] = gameServer.Get("MAX-PLAYERS")
+	*/
 
 	answerPacket["B-version"] = "1.89.239937.0"
+
 	event.Client.WriteFESL("GDAT", answerPacket, 0x0)
 	tM.logAnswer("GDAT", answerPacket, 0x0)
 
-	tid, _ := strconv.Atoi(event.Command.Message["TID"])
+	time.Sleep(100 * time.Millisecond)
+
 	answerPacket = make(map[string]string)
-	answerPacket["TID"] = strconv.Itoa(tid + 1)
+	answerPacket["TID"] = event.Command.Message["TID"]
+	answerPacket["LID"] = event.Command.Message["LID"]
+	answerPacket["GID"] = event.Command.Message["GID"]
+	answerPacket["NAME"] = "ServerName"
+	answerPacket["UID"] = event.Command.Message["GID"]
+	answerPacket["PID"] = "1"
+	event.Client.WriteFESL("PDAT", answerPacket, 0x0)
+	tM.logAnswer("PDAT", answerPacket, 0x0)
+
+	answerPacket = make(map[string]string)
+	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["LID"] = event.Command.Message["LID"]
 	answerPacket["GID"] = event.Command.Message["GID"]
 	answerPacket["UGID"] = gameServer.Get("UGID")
+
+	answerPacket["D-AutoBalance"] = ""
+	answerPacket["D-Crosshair"] = ""
+	answerPacket["D-FriendlyFire"] = ""
+	answerPacket["D-KillCam"] = ""
+	answerPacket["D-Minimap"] = ""
+	answerPacket["D-MinimapSpotting"] = ""
+
+	answerPacket["D-ServerDescriptionCount"] = "0"
+
+	answerPacket["D-ThirdPersonVehicleCameras"] = ""
+	answerPacket["D-ThreeDSpotting"] = ""
+
+	maxPlayers, _ := strconv.Atoi(gameServer.Get("MAX-PLAYERS"))
+
+	for i := 0; i < maxPlayers; i++ {
+		entry := gameServer.Get("PDAT00" + strconv.Itoa(i))
+		if entry != "|0|0|0|0" && entry != "" {
+		} else {
+			entry = "|0|0|0|0"
+		}
+
+		key := "D-pdat" + strconv.Itoa(i)
+		if i < 10 {
+			key = "D-pdat0" + strconv.Itoa(i)
+		}
+		answerPacket[key] = entry
+	}
 
 	event.Client.WriteFESL("GDET", answerPacket, 0x0)
 	tM.logAnswer("GDET", answerPacket, 0x0)

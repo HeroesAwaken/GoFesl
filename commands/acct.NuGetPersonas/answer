@@ -2,6 +2,5 @@
 	"TXN": "NuGetPersonas",
 	"personas.0": "MakaHost-NCommando",
 	"personas.1": "MakaHost-NSoldier",
-	"personas.2": "MakaHost-NGunner",
-	"personas.[]": "3"
+	"personas.[]": "2"
 }

@@ -1,10 +1,8 @@
 {
 	"TXN": "Status",
-	"id.id": "605",
+	"id.id": "1",
 	"id.partition": "/eagames/bfwest-dedicated",
 	"props.{availableServerCount}": "1",
-	"props.{avgFit}": "100",
-	"props.{games}.0.avgFit": "1",
 	"props.{games}.0.fit": "1",
 	"props.{games}.0.gid": "1",
 	"props.{games}.0.lid": "1",
