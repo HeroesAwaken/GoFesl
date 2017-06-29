@@ -7,13 +7,13 @@ import (
 	"os/signal"
 	"runtime"
 
-	"github.com/ReviveNetwork/GoRevive/core"
+	"github.com/RHeroesAwaken/GoAwaken/core"
 	"github.com/go-redis/redis"
 
 	"net/http"
 	"net/http/pprof"
 
-	log "github.com/ReviveNetwork/GoRevive/Log"
+	log "github.com/HeroesAwaken/GoAwaken/Log"
 )
 
 var (
@@ -41,7 +41,7 @@ var (
 
 func emtpyHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debugln(r.URL.String())
-	fmt.Fprintf(w, "<update><status>Online</status><name>Test</name></update>")
+	fmt.Fprintf(w, "<update><status>Online</status></update>")
 }
 
 func relationship(w http.ResponseWriter, r *http.Request) {

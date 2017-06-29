@@ -1,6 +1,6 @@
 {
 	"TXN": "Start",
-	"debugLevel": "high",
+	"debugLevel": "low",
 	"partition.partition": "/eagames/bfwest-dedicated",
 	"players.0.ownerId": "1817675496",
 	"players.0.ownerType": "1",

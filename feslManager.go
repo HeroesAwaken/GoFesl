@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	gs "github.com/ReviveNetwork/GoRevive/GameSpy"
-	log "github.com/ReviveNetwork/GoRevive/Log"
-	"github.com/ReviveNetwork/GoRevive/core"
+	gs "github.com/HeroesAwaken/GoAwaken/GameSpy"
+	log "github.com/HeroesAwaken/GoAwaken/Log"
+	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/go-redis/redis"
 )
 
@@ -220,13 +220,13 @@ func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 		}
 
 		if owner != "0" && owner != event.Client.RedisState.Get("uID") {
-			sql := "UPDATE `revive_heroes_stats` SET " + query + "pid=" + owner + " WHERE pid = " + owner + ""
+			sql := "UPDATE `awaken_heroes_stats` SET " + query + "pid=" + owner + " WHERE pid = " + owner + ""
 			_, err := fM.db.Exec(sql)
 			if err != nil {
 				log.Errorln(err)
 			}
 		} else {
-			sql := "UPDATE `revive_heroes_accounts` SET " + query + "uid=" + owner + " WHERE uid = " + owner + ""
+			sql := "UPDATE `awaken_heroes_accounts` SET " + query + "uid=" + owner + " WHERE uid = " + owner + ""
 			_, err := fM.db.Exec(sql)
 			if err != nil {
 				log.Errorln(err)
@@ -289,7 +289,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 
 	if event.Client.RedisState.Get("clientType") == "server" {
 		// Server login
-		stmt, err := fM.db.Prepare("SELECT t1.id, t2.username, t2.id  FROM revive_heroes_servers t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.secretKey = ?")
+		stmt, err := fM.db.Prepare("SELECT t1.id, t2.username, t2.id  FROM awaken_heroes_servers t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.secretKey = ?")
 		defer stmt.Close()
 		if err != nil {
 			log.Debugln(err)
@@ -393,7 +393,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
+	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM awaken_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
 	defer stmt.Close()
 	if err != nil {
 		log.Errorln(err)
@@ -437,7 +437,7 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
+	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM awaken_soldiers WHERE web_id = ? AND game = ?")
 	defer stmt.Close()
 	if err != nil {
 		return
@@ -489,7 +489,7 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	loginPacket["userId"] = event.Client.RedisState.Get("uID")
 	loginPacket["globalOptin"] = "0"
 	loginPacket["thidPartyOptin"] = "0"
-	loginPacket["language"] = "en"
+	loginPacket["language"] = "enUS"
 	loginPacket["country"] = event.Client.RedisState.Get("country")
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
@@ -533,7 +533,7 @@ func (fM *FeslManager) GetStatsForOwners(event gs.EventClientTLSCommand) {
 		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
 	}
 
-	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM revive_heroes_stats WHERE pid IN (?" + strings.Repeat(",?", len(pids)-1) + ")")
+	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM awaken_heroes_stats WHERE pid IN (?" + strings.Repeat(",?", len(pids)-1) + ")")
 	defer stmt.Close()
 	if err != nil {
 		log.Errorln(err)
@@ -605,14 +605,14 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 	result := make([]string, keys+1)
 
 	dest := make([]interface{}, keys+1) // A temporary interface{} slice
-	for i, _ := range rawResult {
+	for i := range rawResult {
 		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
 	}
 
 	// Owner==0 is for accounts-stats.
 	// Otherwise hero-stats
 	if owner == "0" || owner == event.Client.RedisState.Get("uID") {
-		stmt, err := fM.db.Prepare("SELECT " + query + "uid FROM revive_heroes_accounts WHERE uid = ?")
+		stmt, err := fM.db.Prepare("SELECT " + query + "uid FROM awaken_heroes_accounts WHERE uid = ?")
 		defer stmt.Close()
 		if err != nil {
 			log.Errorln(err)
@@ -628,7 +628,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 
 			for _, column := range columns {
 				log.Debugln("Checking column " + column)
-				stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"revive_heroes_accounts\" AND COLUMN_NAME = \"" + column + "\"")
+				stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"awaken_heroes_accounts\" AND COLUMN_NAME = \"" + column + "\"")
 				defer stmt2.Close()
 				if err != nil {
 				}
@@ -641,7 +641,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 					log.Debugln("Creating column " + column)
 					// If we land here, the column doesn't exist, so create it
 
-					_, err := fM.db.Exec("ALTER TABLE `revive_heroes_accounts` ADD COLUMN `" + column + "` TEXT NULL")
+					_, err := fM.db.Exec("ALTER TABLE `awaken_heroes_accounts` ADD COLUMN `" + column + "` TEXT NULL")
 					if err != nil {
 					}
 				}
@@ -685,7 +685,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 
 	// DO the same as above but for hero-stats instead of hero-account
 
-	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM revive_heroes_stats WHERE pid = ?")
+	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM awaken_heroes_stats WHERE pid = ?")
 
 	defer stmt.Close()
 	if err != nil {
@@ -702,7 +702,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 
 		for _, column := range columns {
 			log.Debugln("Checking column " + column)
-			stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"revive_heroes_stats\" AND COLUMN_NAME = \"" + column + "\"")
+			stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"awaken_heroes_stats\" AND COLUMN_NAME = \"" + column + "\"")
 			defer stmt2.Close()
 			if err != nil {
 			}
@@ -715,7 +715,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 				log.Debugln("Creating column " + column)
 				// If we land here, the column doesn't exist, so create it
 
-				sql := "ALTER TABLE `revive_heroes_stats` ADD COLUMN `" + column + "` TEXT NULL"
+				sql := "ALTER TABLE `awaken_heroes_stats` ADD COLUMN `" + column + "` TEXT NULL"
 				_, err := fM.db.Exec(sql)
 				if err != nil {
 					log.Errorln(sql)
@@ -795,10 +795,10 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 		helloPacket["domainPartition.subDomain"] = "bfwest-dedicated"
 	}
 	helloPacket["curTime"] = "Jun-15-2017 07:26:12 UTC"
-	helloPacket["activityTimeoutSecs"] = "0"
+	helloPacket["activityTimeoutSecs"] = "10"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "bfwest-server.theater.ea.com"
+	helloPacket["theaterIp"] = "localhost"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {
@@ -834,9 +834,12 @@ func (fM *FeslManager) newClient(event gs.EventNewClientTLS) {
 				if !event.Client.IsActive {
 					return
 				}
-				pingSite := make(map[string]string)
-				pingSite["TXN"] = "Ping"
-				event.Client.WriteFESL("fsys", pingSite, 0)
+				memCheck := make(map[string]string)
+				memCheck["TXN"] = "MemCheck"
+				memCheck["memcheck.[]"] = "0"
+				memCheck["salt"] = "5"
+				event.Client.WriteFESL("fsys", memCheck, 0xC0000000)
+				fM.logAnswer("fsys", memCheck, 0xC0000000)
 			}
 		}
 	}()
