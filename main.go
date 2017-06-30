@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"runtime"
 
-	"github.com/RHeroesAwaken/GoAwaken/core"
+	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/go-redis/redis"
 
 	"net/http"

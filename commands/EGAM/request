@@ -1,0 +1,17 @@
+{
+	"GID": "1",
+	"LID": "1",
+	"PORT": "55277",
+	"PTYPE": "P",
+	"R-INT-IP": "192.168.69.69",
+	"R-INT-PORT": "55277",
+	"R-U-accid": "158",
+	"R-U-category": "3",
+	"R-U-dataCenter": "iad",
+	"R-U-elo": "1",
+	"R-U-externalIp": "192.168.69.69",
+	"R-U-kit": "1",
+	"R-U-lvl": "1",
+	"R-U-team": "1",
+	"TID": "70"
+}

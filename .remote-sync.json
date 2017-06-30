@@ -1,0 +1,16 @@
+{
+  "transport": "scp",
+  "hostname": "192.168.69.10",
+  "port": "22",
+  "username": "root",
+  "keyfile": "C:\\Users\\Michael\\Downloads\\heros-key.pem",
+  "target": "/opt/heros",
+  "uploadOnSave": true,
+  "ignore": [
+    ".remote-sync.json",
+    ".git/**"
+  ],
+  "deleteLocal": false,
+  "useAtomicWrites": false,
+  "watch": []
+}

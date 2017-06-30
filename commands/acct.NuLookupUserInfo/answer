@@ -1,12 +1,16 @@
 {
 	"TXN": "NuLookupUserInfo",
-	"userInfo.0.masterUserId": "1817675496",
+	"userInfo.0.masterUserId": "158",
 	"userInfo.0.namespace": "MAIN",
-	"userInfo.0.userId": "5",
-	"userInfo.0.userName": "MakaHost-NCommando",
-	"userInfo.1.masterUserId": "1817675496",
+	"userInfo.0.userId": "1021385",
+	"userInfo.0.userName": "Spencer",
+	"userInfo.1.masterUserId": "158",
 	"userInfo.1.namespace": "MAIN",
-	"userInfo.1.userId": "7",
-	"userInfo.1.userName": "MakaHost-NSoldier",
-	"userInfo.[]": "2"
+	"userInfo.1.userId": "100",
+	"userInfo.1.userName": "Spencer",
+	"userInfo.2.masterUserId": "158",
+	"userInfo.2.namespace": "MAIN",
+	"userInfo.2.userId": "1995050",
+	"userInfo.2.userName": "Spencer",
+	"userInfo.[]": "3"
 }

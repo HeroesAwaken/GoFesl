@@ -299,7 +299,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		var sID, uID int
 		var username string
 
-		err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&sID, &username, &uID)
+		err = stmt.QueryRow(event.Command.Message["password"]).Scan(&sID, &username, &uID)
 		if err != nil {
 			loginPacket := make(map[string]string)
 			loginPacket["TXN"] = "NuLogin"
@@ -393,7 +393,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM awaken_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
+	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
 	defer stmt.Close()
 	if err != nil {
 		log.Errorln(err)
@@ -437,7 +437,7 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM awaken_soldiers WHERE web_id = ? AND game = ?")
+	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
 	defer stmt.Close()
 	if err != nil {
 		return
@@ -798,7 +798,7 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 	helloPacket["activityTimeoutSecs"] = "10"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "localhost"
+	helloPacket["theaterIp"] = "mgm.reviveheros.com"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {

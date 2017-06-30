@@ -3,9 +3,9 @@
 	"activityTimeoutSecs": "10",
 	"curTime": "Jun-15-2017 07:26:12 UTC",
 	"domainPartition.domain": "eagames",
-	"domainPartition.subDomain": "bfwest-dedicated",
+	"domainPartition.subDomain": "bfwest-server",
 	"messengerIp": "messaging.ea.com",
 	"messengerPort": "13505",
-	"theaterIp": "localhost",
-	"theaterPort": "18275"
+	"theaterIp": "mgm.reviveheros.com",
+	"theaterPort": "18056"
 }

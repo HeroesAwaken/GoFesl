@@ -1,6 +1,7 @@
 {
 	"TXN": "NuLogin",
-	"encryptedInfo": "2e8d3c8b860fa341245c47a05e01e884",
-	"macAddr": "$08626635564e",
+	"macAddr": "$005056c00008",
+	"nuid": "ea@ea.com",
+	"password": "12345",
 	"returnEncryptedInfo": "0"
 }
