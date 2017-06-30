@@ -169,34 +169,31 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 		log.Noteln("Client left")
 		return
 	}
-	serverFull := false
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
-	answerPacket["GID"] = event.Command.Message["GID"]
-	answerPacket["LID"] = event.Command.Message["LID"]
-
-	gameServer := new(core.RedisState)
-	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
-
-	maxPlayers, _ := strconv.Atoi(gameServer.Get("MAX-PLAYERS"))
-	tmpPlayers, _ := strconv.Atoi(gameServer.Get("ACTIVE-PLAYERS"))
-
-	if tmpPlayers+1 > maxPlayers {
-		// Server is full
-		log.Noteln("Server full")
-		tmpPlayers, _ := strconv.Atoi(gameServer.Get("QUEUE-LENGTH"))
-		gameServer.Set("QUEUE-LENGTH", strconv.Itoa(tmpPlayers))
-		tmpPlayers++
-		serverFull = true
-	}
-
-	if !serverFull {
-		event.Client.WriteFESL("EGAM", answerPacket, 0x0)
-		tM.logAnswer("EGAM", answerPacket, 0x0)
-	}
+	answerPacket["GID"] = "1"
+	answerPacket["LID"] = "1"
 
 	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
+	tM.logAnswer("EGAM", answerPacket, 0x0)
+
+	ap := make(map[string]string)
+	ap["PL"] = "pc"
+	ap["TICKET"] = "12345678"
+	ap["PID"] = "100"
+	ap["I"] = "192.168.69.171"
+	ap["P"] = "18567"
+	ap["HUID"] = "100"
+	ap["INT-PORT"] = "18567"
+	ap["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d"
+	ap["INT-IP"] = "192.168.67.171"
+	ap["UGID"] = "1"
+	ap["LID"] = "1"
+	ap["GID"] = "1"
+	event.Client.WriteFESL("EGEG", ap, 0x0)
+
+	//event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	tM.logAnswer("EGAM", answerPacket, 0x0)
 }
 
@@ -266,7 +263,7 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	answerPacket["LID"] = "1"
 	answerPacket["GID"] = "1"
 	answerPacket["TYPE"] = "G"
-	answerPacket["HN"] = "MakaHost"
+	answerPacket["HN"] = "Spencer"
 	answerPacket["HU"] = "1"
 	answerPacket["N"] = "Test"
 	answerPacket["I"] = "127.0.0.1"
@@ -478,8 +475,8 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
-	answerPacket["NAME"] = "MakaHost"
-	answerPacket["CID"] = "1"
+	answerPacket["NAME"] = "Spencer"
+	answerPacket["CID"] = "158"
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
@@ -493,6 +490,21 @@ func (tM *TheaterManager) UBRA(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
+
+	answerPacket2 := make(map[string]string)
+	answerPacket2["R-INT-PORT"] = "192.168.69.69"
+	answerPacket2["R-INT-IP"] = "192.168.69.69"
+	answerPacket2["PORT"] = "18567"
+	answerPacket2["NAME"] = "1"
+	answerPacket2["PTYPE"] = "P"
+	answerPacket2["TICKET"] = "12345678"
+	answerPacket2["PID"] = "100"
+	answerPacket2["UID"] = "158"
+	answerPacket2["IP"] = "192.168.69.69"
+	answerPacket2["LID"] = "1"
+	answerPacket2["GID"] = "1"
+	event.Client.WriteFESL("EGRQ", answerPacket2, 0x0)
+
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
 
@@ -508,13 +520,6 @@ func (tM *TheaterManager) UGAM(event gs.EventClientFESLCommand) {
 	log.Noteln("Updating GameServer " + event.Command.Message["LID"])
 
 	for index, value := range event.Command.Message {
-		// Strip quotes
-		if len(value) > 0 && value[0] == '"' {
-			value = value[1:]
-		}
-		if len(value) > 0 && value[len(value)-1] == '"' {
-			value = value[:len(value)-1]
-		}
 		log.Noteln("SET " + index + " " + value)
 		gameServer.Set(index, value)
 	}
