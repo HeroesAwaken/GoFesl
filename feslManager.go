@@ -170,7 +170,7 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 		log.Noteln("Client left")
 		return
 	}
-
+	log.Noteln(event.Command.Message["partition.partition"])
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Start"
 	answerPacket["id.id"] = "1"
@@ -327,7 +327,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT t1.uid, t1.sessionid, t1.ip, t2.username, t2.banned, t2.is_admin, t2.is_tester, t2.confirmed_em, t2.key_hash, t2.email, t2.country FROM web_sessions t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.sessionid = ?")
+	stmt, err := fM.db.Prepare("SELECT id, username, heroes_key, banned, is_admin, is_tester, confirmed_em, key_hash, email, country FROM web_users t1 WHERE heroes_key = ?")
 	defer stmt.Close()
 	if err != nil {
 		log.Debugln(err)
@@ -338,7 +338,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	var ip, username, sessionID, keyHash, email, country string
 	var banned, isAdmin, isTester, confirmedEm bool
 
-	err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&uID, &sessionID, &ip, &username, &banned, &isAdmin, &isTester, &confirmedEm, &keyHash, &email, &country)
+	err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&uID, &username, &sessionID, &banned, &isAdmin, &isTester, &confirmedEm, &keyHash, &email, &country)
 	if err != nil {
 		loginPacket := make(map[string]string)
 		loginPacket["TXN"] = "NuLogin"
@@ -349,6 +349,8 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	log.Noteln(sessionID)
+	log.Noteln(event.Command.Message["encryptedInfo"])
 	// Currently only allow admins & testers
 	if sessionID != event.Command.Message["encryptedInfo"] || !confirmedEm || banned || (!isAdmin && !isTester) {
 		log.Noteln("User not worthy: " + username)
@@ -393,7 +395,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
+	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ") AND game='heroes'")
 	defer stmt.Close()
 	if err != nil {
 		log.Errorln(err)
@@ -421,6 +423,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
 		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = webId
 		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
+		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = "24"
 
 		k++
 	}
@@ -438,6 +441,7 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 	}
 
 	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
+	log.Noteln(stmt)
 	defer stmt.Close()
 	if err != nil {
 		return
@@ -484,7 +488,7 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	loginPacket["heroName"] = event.Client.RedisState.Get("username")
 	loginPacket["nuid"] = event.Client.RedisState.Get("email")
 	loginPacket["DOBDay"] = "1"
-	loginPacket["DOBMonthg"] = "1"
+	loginPacket["DOBMonth"] = "1"
 	loginPacket["DOBYear"] = "2017"
 	loginPacket["userId"] = event.Client.RedisState.Get("uID")
 	loginPacket["globalOptin"] = "0"
@@ -727,7 +731,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 		//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
 		return
 	}
-
+	log.Noteln(stmt)
 	err = stmt.QueryRow(owner).Scan(dest...)
 	if err != nil {
 		log.Debugln(err)
@@ -798,7 +802,7 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 	helloPacket["activityTimeoutSecs"] = "10"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "mgm.reviveheros.com"
+	helloPacket["theaterIp"] = "mgm.reviveheroes.com"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {

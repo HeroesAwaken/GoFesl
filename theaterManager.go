@@ -62,6 +62,9 @@ type TheaterManager struct {
 	gameServerGlobal *core.RedisState
 }
 
+var wantsToJoin bool = false
+var localPort string = ""
+
 // New creates and starts a new ClientManager
 func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client) {
 	var err error
@@ -175,26 +178,31 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	answerPacket["GID"] = "1"
 	answerPacket["LID"] = "1"
 
+	localPort = event.Command.Message["R-INT-PORT"]
+	wantsToJoin = true
+
 	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	tM.logAnswer("EGAM", answerPacket, 0x0)
 
 	ap := make(map[string]string)
 	ap["PL"] = "pc"
-	ap["TICKET"] = "12345678"
+	ap["TICKET"] = "1234567890"
 	ap["PID"] = "100"
-	ap["I"] = "192.168.69.171"
+	ap["I"] = "192.168.69.7"
 	ap["P"] = "18567"
-	ap["HUID"] = "100"
+	ap["HUID"] = "150"
 	ap["INT-PORT"] = "18567"
-	ap["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d"
-	ap["INT-IP"] = "192.168.67.171"
-	ap["UGID"] = "1"
+	ap["EKEY"] = "EKEY123"
+	ap["INT-IP"] = "192.168.69.7"
+	ap["UGID"] = "gameid"
 	ap["LID"] = "1"
 	ap["GID"] = "1"
 	event.Client.WriteFESL("EGEG", ap, 0x0)
 
+	tM.logAnswer("EGEG", ap, 0x0)
+	log.Noteln(ap)
 	//event.Client.WriteFESL("EGAM", answerPacket, 0x0)
-	tM.logAnswer("EGAM", answerPacket, 0x0)
+	//tM.logAnswer("EGAM", answerPacket, 0x0)
 }
 
 func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
@@ -236,12 +244,12 @@ func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["MAX-PLAYERS"] = "16"
-	answerPacket["EKEY"] = "AIBSgPFqRDg0TfdXW1zUGa4%3d"
-	answerPacket["UGID"] = event.Command.Message["UGID"]
+	answerPacket["EKEY"] = "EKEY123"
+	answerPacket["UGID"] = "gameid"
 	answerPacket["JOIN"] = event.Command.Message["JOIN"]
-	answerPacket["LID"] = strconv.Itoa(gameLid)
-	answerPacket["SECRET"] = "4l94N6Y0A3Il3+kb55pVfK6xRjc+Z6sGNuztPeNGwN5CMwC7ZlE/lwel07yciyZ5y3bav7whbzHugPm11NfuBg%3d%3d"
-	answerPacket["J"] = event.Command.Message["JOIN"]
+	answerPacket["LID"] = "1"
+	answerPacket["SECRET"] = "test123" //
+	answerPacket["J"] = "1"
 	answerPacket["GID"] = "1"
 	event.Client.WriteFESL("CGAM", answerPacket, 0x0)
 	tM.logAnswer("CGAM", answerPacket, 0x0)
@@ -264,9 +272,9 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	answerPacket["GID"] = "1"
 	answerPacket["TYPE"] = "G"
 	answerPacket["HN"] = "Spencer"
-	answerPacket["HU"] = "1"
+	answerPacket["HU"] = "100"
 	answerPacket["N"] = "Test"
-	answerPacket["I"] = "127.0.0.1"
+	answerPacket["I"] = "192.168.69.7"
 	answerPacket["P"] = "18567"
 	answerPacket["J"] = "0"
 	answerPacket["JP"] = "0"
@@ -390,7 +398,7 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 
 	answerPacket["D-ThirdPersonVehicleCameras"] = "0"
 	answerPacket["D-ThreeDSpotting"] = "0"
-	answerPacket["UGID"] = "1"
+	answerPacket["UGID"] = "gameid"
 
 	event.Client.WriteFESL("GDET", answerPacket, 0x0)
 	tM.logAnswer("GDET", answerPacket, 0x0)
@@ -457,7 +465,7 @@ func (tM *TheaterManager) LLST(event gs.EventClientFESLCommand) {
 	ldatPacket["TID"] = "LDAT"
 	ldatPacket["FAVORITE-GAMES"] = "0"
 	ldatPacket["FAVORITE-PLAYERS"] = "0"
-	ldatPacket["LID"] = "257"
+	ldatPacket["LID"] = "1"
 	ldatPacket["LOCALE"] = "en_US"
 	ldatPacket["MAX-GAMES"] = "10000"
 	ldatPacket["NAME"] = "bfheroesPC1"
@@ -475,8 +483,8 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
-	answerPacket["NAME"] = "Spencer"
-	answerPacket["CID"] = "158"
+	answerPacket["NAME"] = "mDaWg"
+	answerPacket["CID"] = "1817224672"
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
@@ -490,21 +498,6 @@ func (tM *TheaterManager) UBRA(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
-
-	answerPacket2 := make(map[string]string)
-	answerPacket2["R-INT-PORT"] = "192.168.69.69"
-	answerPacket2["R-INT-IP"] = "192.168.69.69"
-	answerPacket2["PORT"] = "18567"
-	answerPacket2["NAME"] = "1"
-	answerPacket2["PTYPE"] = "P"
-	answerPacket2["TICKET"] = "12345678"
-	answerPacket2["PID"] = "100"
-	answerPacket2["UID"] = "158"
-	answerPacket2["IP"] = "192.168.69.69"
-	answerPacket2["LID"] = "1"
-	answerPacket2["GID"] = "1"
-	event.Client.WriteFESL("EGRQ", answerPacket2, 0x0)
-
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
 
@@ -513,6 +506,9 @@ func (tM *TheaterManager) UGAM(event gs.EventClientFESLCommand) {
 		log.Noteln("Client left")
 		return
 	}
+
+	log.Noteln("yo dis a server ")
+	event.Client.State.IsServer = true
 
 	gameServer := new(core.RedisState)
 	gameServer.New(tM.redis, "gameServer-"+event.Command.Message["LID"])
@@ -562,6 +558,69 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 				pingPacket := make(map[string]string)
 				pingPacket["TID"] = "0"
 				event.Client.WriteFESL("PING", pingPacket, 0x0)
+			}
+		}
+	}()
+	event.Client.State.JoinTicker = time.NewTicker(time.Second * 10)
+	go func() {
+		for {
+			if !event.Client.IsActive {
+				return
+			}
+			select {
+			case <-event.Client.State.JoinTicker.C:
+				if !event.Client.IsActive {
+					return
+				}
+				if !event.Client.State.IsServer {
+					log.Noteln("Is not a server!")
+				} else {
+
+					if !wantsToJoin {
+						log.Noteln("Not joining yet")
+					} else {
+						log.Noteln("unzipping the server's pants")
+						answerPacket2 := make(map[string]string)
+						answerPacket2["TID"] = "0"
+
+						answerPacket2["NAME"] = "mDaWg"
+						answerPacket2["UID"] = "1817224672"
+						answerPacket2["PID"] = "150"
+						answerPacket2["TICKET"] = "1234567890"
+
+						answerPacket2["IP"] = "192.168.69.171"
+						answerPacket2["PORT"] = localPort
+
+				
+						answerPacket2["PTYPE"] = "P"
+
+						answerPacket2["XUID"] = "24"
+						answerPacket2["R-XUID"] = "24"
+
+
+						answerPacket2["GROUP.[]"] = "0"
+
+						answerPacket2["R-USER"] = "1817224672"
+						answerPacket2["R-GROUPID"] = "0"
+						answerPacket2["GROUP.0"] = "0"
+
+						answerPacket2["R-U-accid"] = "1817224672"
+						answerPacket2["R-U-elo"] = "1000"
+						answerPacket2["R-U-team"] = "1"
+						answerPacket2["R-U-kit"] = "1"
+						answerPacket2["R-U-lvl"] = "1"
+						answerPacket2["R-U-dataCenter"] = "iad"
+						answerPacket2["R-U-externalIp"] = "192.168.69.171"
+						answerPacket2["R-U-internalIp"] = "192.168.69.171"
+						answerPacket2["R-U-category"] = "3"
+						
+						
+						answerPacket2["LID"] = "1"
+						answerPacket2["GID"] = "1"
+						event.Client.WriteFESL("EGRQ", answerPacket2, 0x0)
+						tM.logAnswer("EGRQ", answerPacket2, 0x0)
+					}
+				}
 			}
 		}
 	}()
