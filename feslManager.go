@@ -289,7 +289,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 
 	if event.Client.RedisState.Get("clientType") == "server" {
 		// Server login
-		stmt, err := fM.db.Prepare("SELECT t1.id, t2.username, t2.id  FROM awaken_heroes_servers t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.secretKey = ?")
+		stmt, err := fM.db.Prepare("SELECT id, name, id FROM revive_heroes_servers WHERE secretKey = ?")
 		defer stmt.Close()
 		if err != nil {
 			log.Debugln(err)
@@ -314,6 +314,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		saveRedis["uID"] = strconv.Itoa(uID)
 		saveRedis["username"] = username
 		saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
+		saveRedis["keyHash"] = event.Command.Message["password"]
 		event.Client.RedisState.SetM(saveRedis)
 
 		loginPacket := make(map[string]string)
@@ -321,7 +322,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		loginPacket["profileId"] = strconv.Itoa(uID)
 		loginPacket["userId"] = strconv.Itoa(uID)
 		loginPacket["nuid"] = username
-		loginPacket["lkey"] = event.Command.Message["encryptedInfo"]
+		loginPacket["lkey"] = event.Command.Message["password"]
 		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 		return
@@ -389,6 +390,38 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		return
 	}
 
+
+	if event.Client.RedisState.Get("clientType") == "server" {
+		log.Noteln("LookupUserInfo")
+		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id =" + event.Client.RedisState.Get("uID"))
+		defer stmt.Close()
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+		var name, sID string
+
+		err = stmt.QueryRow().Scan(&name, &sID)
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+
+		personaPacket := make(map[string]string)
+		personaPacket["TXN"] = "NuLookupUserInfo"
+		personaPacket["userInfo.0.userName"] = name
+		personaPacket["userInfo.0.userId"] = sID
+		personaPacket["userInfo.0.masterUserId"] = sID
+		personaPacket["userInfo.0.namespace"] = "MAIN"
+		personaPacket["userInfo.0.xuid"] = "24"
+		//personaPacket["user"] = "1"
+		personaPacket["userInfo.[]"] = strconv.Itoa(1)
+
+		event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+		return
+	}
+
 	userNames := []interface{}{}
 	keys, _ := strconv.Atoi(event.Command.Message["userInfo.[]"])
 	for i := 0; i < keys; i++ {
@@ -432,14 +465,58 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+
+
 }
 
 func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
+
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return
 	}
 
+	if event.Client.RedisState.Get("clientType") == "server" {
+		log.Noteln("We are a server NuGetPersonas")
+		// Server login
+		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id = ?")
+		log.Noteln(stmt)
+		defer stmt.Close()
+		if err != nil {
+			return
+		}
+
+		rows, err := stmt.Query(event.Client.RedisState.Get("uID"))
+		if err != nil {
+			return
+		}
+
+		personaPacket := make(map[string]string)
+		personaPacket["TXN"] = "NuGetPersonas"
+
+		var i = 0
+		for rows.Next() {
+			var name string
+			var id int
+			err := rows.Scan(&name, &id)
+			if err != nil {
+				log.Errorln(err)
+				return
+			}
+			personaPacket["personas."+strconv.Itoa(i)] = name
+			event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), strconv.Itoa(id))
+			i++
+		}
+
+		personaPacket["personas.[]"] = strconv.Itoa(i)
+
+		event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+		log.Noteln(event.Command.Query, personaPacket, event.Command.PayloadID)
+		return
+	}
+
+	log.Noteln("Why we get here?")
 	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
 	log.Noteln(stmt)
 	defer stmt.Close()
