@@ -379,7 +379,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	loginPacket["profileId"] = strconv.Itoa(uID)
 	loginPacket["userId"] = strconv.Itoa(uID)
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = keyHash
+	loginPacket["lkey"] = "12345"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -454,7 +454,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 
 		personaPacket["userInfo."+strconv.Itoa(k)+".userName"] = nickname
 		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
-		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = webId
+		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = pid
 		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
 		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = "24"
 
