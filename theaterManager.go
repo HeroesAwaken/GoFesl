@@ -234,7 +234,8 @@ func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["MAX-PLAYERS"] = "16"
-	answerPacket["EKEY"] = "AIBSgPFqRDg0TfdX"
+	answerPacket["EKEY"] = "1164"
+	answerPacket["E_KEY"] = "1164"
 	answerPacket["UGID"] = "7eb6155c-ac70-4567-9fc4-732d56a9334a"
 	answerPacket["JOIN"] = event.Command.Message["JOIN"]
 	answerPacket["LID"] = "1"
@@ -615,9 +616,11 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						ap["HUID"] = "1"
 						ap["XUID"] = "24"
 						ap["HPID"] = "1"
-						ap["EKEY"] = "AIBSgPFqRDg0TfdX"
+						ap["EKEY"] = "1164"
+						ap["E_KEY"] = "1164"
 						ap["INT-IP"] = "192.168.69.7"
 						ap["INT-PORT"] = "18567"
+						ap["SECRET"] = "2587913"
 						ap["UGID"] = "7eb6155c-ac70-4567-9fc4-732d56a9334a"
 						ap["LID"] = "1"
 						ap["GID"] = "1"
@@ -650,7 +653,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 
 						answerPacket2["XUID"] = "24"
 						answerPacket2["R-XUID"] = "24"
-						
+
 						answerPacket2["R-USER"] = "Spencer"
 
 
