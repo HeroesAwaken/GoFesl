@@ -167,7 +167,7 @@ func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 		return
 	}
 
-	wantsToLeaveQueue = true
+	//wantsToLeaveQueue = true
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
@@ -177,12 +177,12 @@ func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 	tM.logAnswer("ECNL", answerPacket, 0x0)
 
 
-	ap := make(map[string]string)
+	/*ap := make(map[string]string)
 	ap["TID"] = "7"
 	ap["GID"] = "5459"
 	ap["LID"] = "1"
 	event.Client.WriteFESL("ECNLmisc", ap, 0x0)
-	tM.logAnswer("ECNLmisc", ap, 0x0)		
+	tM.logAnswer("ECNLmisc", ap, 0x0)		*/
 }
 
 func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
