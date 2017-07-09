@@ -141,19 +141,22 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	log.Noteln("STATUS CALLED")
+
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Status"
 	answerPacket["id.id"] = "1"
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	answerPacket["sessionState"] = "COMPLETE"
-	answerPacket["props.{}"] = "3"
+	answerPacket["props.{}"] = "2"
 	answerPacket["props.{resultType}"] = "JOIN"
 	answerPacket["props.{availableServerCount}"] = "1"
 
+
+	answerPacket["props.{games}.1.lid"] = "1"
+	answerPacket["props.{games}.1.fit"] = "1001"
+	answerPacket["props.{games}.1.gid"] = "1"
 	answerPacket["props.{games}.[]"] = "1"
-	answerPacket["props.{games}.0.lid"] = "1"
-	answerPacket["props.{games}.0.gid"] = "1"
-	answerPacket["props.{games}.0.fit"] = "1"
 	/*
 		answerPacket["props.{games}.1.lid"] = "2"
 		answerPacket["props.{games}.1.fit"] = "100"
@@ -170,6 +173,7 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 		log.Noteln("Client left")
 		return
 	}
+	log.Noteln("START CALLED")
 	log.Noteln(event.Command.Message["partition.partition"])
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Start"
