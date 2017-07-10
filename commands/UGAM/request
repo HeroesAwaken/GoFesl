@@ -1,20 +1,11 @@
 {
+	"B-U-army_balance": "Balanced",
 	"B-U-army_distribution": "\"0,0,0,0,0,0,0,0,0,0,0\"",
-	"B-U-avail_vips_national": "4",
-	"B-U-avail_vips_royal": "4",
-	"B-U-avg_ally_rank": "1000",
-	"B-U-avg_axis_rank": "1000",
-	"B-U-easyzone": "no",
-	"B-U-elo_rank": "1000",
-	"B-U-lvl_avg": "0.000000",
-	"B-U-lvl_sdv": "0.000000",
-	"B-U-map_name": "Village",
-	"B-U-punkb": "0",
-	"B-U-ranked": "yes",
-	"B-U-servertype": "public",
-	"GID": "1",
+	"B-U-percent_full": "0",
+	"B-U-server_state": "empty",
+	"GID": "5459",
 	"JOIN": "O",
 	"LID": "1",
-	"NAME": "\"[iad]A Battlefield Heroes Server(169.254.89.46:18567)\"",
-	"TID": "4"
+	"NAME": "[iad]gs1-test.revive.systems(192.168.69.7:18569)",
+	"TID": "17"
 }
