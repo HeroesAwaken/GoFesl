@@ -141,19 +141,22 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	log.Noteln("STATUS CALLED")
+
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Status"
 	answerPacket["id.id"] = "1"
 	answerPacket["id.partition"] = event.Command.Message["partition.partition"]
 	answerPacket["sessionState"] = "COMPLETE"
-	answerPacket["props.{}"] = "3"
+	answerPacket["props.{}"] = "2"
 	answerPacket["props.{resultType}"] = "JOIN"
 	answerPacket["props.{availableServerCount}"] = "1"
 
+
+	answerPacket["props.{games}.1.lid"] = "1"
+	answerPacket["props.{games}.1.fit"] = "1001"
+	answerPacket["props.{games}.1.gid"] = "1"
 	answerPacket["props.{games}.[]"] = "1"
-	answerPacket["props.{games}.0.lid"] = "1"
-	answerPacket["props.{games}.0.gid"] = "1"
-	answerPacket["props.{games}.0.fit"] = "1"
 	/*
 		answerPacket["props.{games}.1.lid"] = "2"
 		answerPacket["props.{games}.1.fit"] = "100"
@@ -170,7 +173,8 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 		log.Noteln("Client left")
 		return
 	}
-
+	log.Noteln("START CALLED")
+	log.Noteln(event.Command.Message["partition.partition"])
 	answerPacket := make(map[string]string)
 	answerPacket["TXN"] = "Start"
 	answerPacket["id.id"] = "1"
@@ -289,7 +293,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 
 	if event.Client.RedisState.Get("clientType") == "server" {
 		// Server login
-		stmt, err := fM.db.Prepare("SELECT t1.id, t2.username, t2.id  FROM awaken_heroes_servers t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.secretKey = ?")
+		stmt, err := fM.db.Prepare("SELECT id, name, id FROM revive_heroes_servers WHERE secretKey = ?")
 		defer stmt.Close()
 		if err != nil {
 			log.Debugln(err)
@@ -299,7 +303,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		var sID, uID int
 		var username string
 
-		err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&sID, &username, &uID)
+		err = stmt.QueryRow(event.Command.Message["password"]).Scan(&sID, &username, &uID)
 		if err != nil {
 			loginPacket := make(map[string]string)
 			loginPacket["TXN"] = "NuLogin"
@@ -314,6 +318,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		saveRedis["uID"] = strconv.Itoa(uID)
 		saveRedis["username"] = username
 		saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
+		saveRedis["keyHash"] = event.Command.Message["password"]
 		event.Client.RedisState.SetM(saveRedis)
 
 		loginPacket := make(map[string]string)
@@ -321,13 +326,13 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		loginPacket["profileId"] = strconv.Itoa(uID)
 		loginPacket["userId"] = strconv.Itoa(uID)
 		loginPacket["nuid"] = username
-		loginPacket["lkey"] = event.Command.Message["encryptedInfo"]
+		loginPacket["lkey"] = event.Command.Message["password"]
 		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT t1.uid, t1.sessionid, t1.ip, t2.username, t2.banned, t2.is_admin, t2.is_tester, t2.confirmed_em, t2.key_hash, t2.email, t2.country FROM web_sessions t1 LEFT JOIN web_users t2 ON t1.uid=t2.id WHERE t1.sessionid = ?")
+	stmt, err := fM.db.Prepare("SELECT id, username, heroes_key, banned, is_admin, is_tester, confirmed_em, key_hash, email, country FROM web_users t1 WHERE heroes_key = ?")
 	defer stmt.Close()
 	if err != nil {
 		log.Debugln(err)
@@ -338,7 +343,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	var ip, username, sessionID, keyHash, email, country string
 	var banned, isAdmin, isTester, confirmedEm bool
 
-	err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&uID, &sessionID, &ip, &username, &banned, &isAdmin, &isTester, &confirmedEm, &keyHash, &email, &country)
+	err = stmt.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&uID, &username, &sessionID, &banned, &isAdmin, &isTester, &confirmedEm, &keyHash, &email, &country)
 	if err != nil {
 		loginPacket := make(map[string]string)
 		loginPacket["TXN"] = "NuLogin"
@@ -349,6 +354,8 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		return
 	}
 
+	log.Noteln(sessionID)
+	log.Noteln(event.Command.Message["encryptedInfo"])
 	// Currently only allow admins & testers
 	if sessionID != event.Command.Message["encryptedInfo"] || !confirmedEm || banned || (!isAdmin && !isTester) {
 		log.Noteln("User not worthy: " + username)
@@ -376,7 +383,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	loginPacket["profileId"] = strconv.Itoa(uID)
 	loginPacket["userId"] = strconv.Itoa(uID)
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = keyHash
+	loginPacket["lkey"] = "12345"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -387,13 +394,48 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		return
 	}
 
+
+	if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] != "Spencer" {
+		log.Noteln("LookupUserInfo - SERVER MODE")
+		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id =" + event.Client.RedisState.Get("uID"))
+		defer stmt.Close()
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+		var name, sID string
+
+		err = stmt.QueryRow().Scan(&name, &sID)
+		if err != nil {
+			log.Errorln(err)
+			return
+		}
+
+		personaPacket := make(map[string]string)
+		personaPacket["TXN"] = "NuLookupUserInfo"
+		personaPacket["userInfo.0.userName"] = name
+		personaPacket["userInfo.0.userId"] = sID
+		personaPacket["userInfo.0.masterUserId"] = sID
+		personaPacket["userInfo.0.namespace"] = "MAIN"
+		personaPacket["userInfo.0.xuid"] = "158"
+		personaPacket["userInfo.0.cid"] = "158"
+		//personaPacket["user"] = "1"
+		personaPacket["userInfo.[]"] = strconv.Itoa(1)
+
+		event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+		return
+	}
+
+	log.Noteln("LookupUserInfo - CLIENT MODE! " + event.Command.Message["userInfo.0.userName"])
+
 	userNames := []interface{}{}
 	keys, _ := strconv.Atoi(event.Command.Message["userInfo.[]"])
 	for i := 0; i < keys; i++ {
 		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM awaken_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
+	stmt, err := fM.db.Prepare("SELECT nickname, web_id, pid FROM revive_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ") AND game='heroes'")
 	defer stmt.Close()
 	if err != nil {
 		log.Errorln(err)
@@ -418,9 +460,10 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		}
 
 		personaPacket["userInfo."+strconv.Itoa(k)+".userName"] = nickname
-		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
-		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = webId
+		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = "100"
+		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = "158"
 		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
+		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = "158"
 
 		k++
 	}
@@ -429,15 +472,60 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+
+
 }
 
 func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
+
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM awaken_soldiers WHERE web_id = ? AND game = ?")
+	if event.Client.RedisState.Get("clientType") == "server" {
+		log.Noteln("We are a server NuGetPersonas")
+		// Server login
+		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id = ?")
+		log.Noteln(stmt)
+		defer stmt.Close()
+		if err != nil {
+			return
+		}
+
+		rows, err := stmt.Query(event.Client.RedisState.Get("uID"))
+		if err != nil {
+			return
+		}
+
+		personaPacket := make(map[string]string)
+		personaPacket["TXN"] = "NuGetPersonas"
+
+		var i = 0
+		for rows.Next() {
+			var name string
+			var id int
+			err := rows.Scan(&name, &id)
+			if err != nil {
+				log.Errorln(err)
+				return
+			}
+			personaPacket["personas."+strconv.Itoa(i)] = name
+			event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), strconv.Itoa(id))
+			i++
+		}
+
+		personaPacket["personas.[]"] = strconv.Itoa(i)
+
+		event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+		fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
+		log.Noteln(event.Command.Query, personaPacket, event.Command.PayloadID)
+		return
+	}
+
+	log.Noteln("Why we get here?")
+	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM revive_soldiers WHERE web_id = ? AND game = ?")
+	log.Noteln(stmt)
 	defer stmt.Close()
 	if err != nil {
 		return
@@ -484,7 +572,7 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	loginPacket["heroName"] = event.Client.RedisState.Get("username")
 	loginPacket["nuid"] = event.Client.RedisState.Get("email")
 	loginPacket["DOBDay"] = "1"
-	loginPacket["DOBMonthg"] = "1"
+	loginPacket["DOBMonth"] = "1"
 	loginPacket["DOBYear"] = "2017"
 	loginPacket["userId"] = event.Client.RedisState.Get("uID")
 	loginPacket["globalOptin"] = "0"
@@ -727,7 +815,7 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 		//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
 		return
 	}
-
+	log.Noteln(stmt)
 	err = stmt.QueryRow(owner).Scan(dest...)
 	if err != nil {
 		log.Debugln(err)
@@ -798,7 +886,7 @@ func (fM *FeslManager) hello(event gs.EventClientTLSCommand) {
 	helloPacket["activityTimeoutSecs"] = "10"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "localhost"
+	helloPacket["theaterIp"] = "mgm.reviveheroes.com"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {
