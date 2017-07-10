@@ -70,6 +70,8 @@ var remotePort string = ""
 var localIP string = ""
 var remoteIP string = ""
 var userId string = ""
+var nickname string = ""
+var pid string = ""
 
 
 // New creates and starts a new ClientManager
@@ -204,6 +206,21 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	answerPacket["LID"] = "1"
 
 	localPort = event.Command.Message["R-INT-PORT"]
+	localIP = event.Command.Message["R-INT-IP"]
+	remotePort = event.Command.Message["PORT"]
+	remoteIP = event.Command.Message["R-U-externalIp"]
+	userId = event.Command.Message["R-U-accid"]
+	log.Noteln("TEH USER IS" + userId)
+
+	stmt, err := tM.db.Prepare("SELECT pid, nickname from revive_soldiers WHERE web_id = ? AND game='heroes'")
+	defer stmt.Close()
+	if err != nil {
+		log.Debugln(err)
+		return
+	}
+
+
+	err = stmt.QueryRow(event.Command.Message["R-U-accid"]).Scan(&pid, &nickname)
 
 	wantsToJoin = true
 	canJoin = false
@@ -415,8 +432,8 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
-	answerPacket["NAME"] = "Spencer"
-	answerPacket["CID"] = "158"
+	answerPacket["NAME"] = nickname
+	answerPacket["CID"] = userId
 	event.Client.WriteFESL(event.Command.Query, answerPacket, 0x0)
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
@@ -507,8 +524,7 @@ func (tM *TheaterManager) UPLA(event gs.EventClientFESLCommand) {
 	answerPacket := make(map[string]string)
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["PID"] = event.Command.Message["PID"]
-	answerPacket["PID"] = event.Command.Message["PID"]
-	answerPacket["P-cid"] = "158"
+	answerPacket["P-cid"] = event.Command.Message["P-cid"]
 	event.Client.WriteFESL("UPLA", answerPacket, 0x0)
 }
 
@@ -556,7 +572,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						ap := make(map[string]string)
 						ap["PL"] = "pc"
 						ap["TICKET"] = "2018751182"
-						ap["PID"] = "158"
+						ap["PID"] = pid
 						ap["I"] = "192.168.69.7"
 						ap["P"] = "18569"
 						ap["HUID"] = "1"
@@ -564,7 +580,6 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						ap["INT-IP"] = "192.168.69.7"
 						ap["INT-PORT"] = "18569"
 						ap["SECRET"] = "2587913"
-						ap["PID"] = "158"
 						ap["UGID"] = "7eb6155c-ac70-4567-9fc4-732d56a9334a"
 						ap["LID"] = "1"
 						ap["GID"] = "5459"
@@ -583,9 +598,9 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2 := make(map[string]string)
 						answerPacket2["TID"] = "6"
 
-						answerPacket2["NAME"] = "Spencer"
-						answerPacket2["UID"] = "158"
-						answerPacket2["PID"] = "158"
+						answerPacket2["NAME"] = nickname
+						answerPacket2["UID"] = userId
+						answerPacket2["PID"] = pid
 						answerPacket2["TICKET"] = "2018751182"
 
 						answerPacket2["IP"] = remoteIP
@@ -597,17 +612,17 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 
 						answerPacket2["PTYPE"] = "P"
 
-						answerPacket2["R-cid"] = "158"
+						answerPacket2["R-cid"] = userId
 
-						answerPacket2["cid"] = "158"
+						answerPacket2["cid"] = userId
 
 
-						answerPacket2["R-USER"] = "Spencer"
-						answerPacket2["R-UID"] = "158"
-						answerPacket2["XUID"] = "158"
-						answerPacket2["R-XUID"] = "158"
+						answerPacket2["R-USER"] = nickname
+						answerPacket2["R-UID"] = userId
+						answerPacket2["XUID"] = userId
+						answerPacket2["R-XUID"] = userId
 
-						answerPacket2["R-U-accid"] = "158"
+						answerPacket2["R-U-accid"] = userId
 						answerPacket2["R-U-elo"] = "1"
 						answerPacket2["R-U-team"] = "1"
 						answerPacket2["R-U-kit"] = "2"
@@ -617,7 +632,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["R-U-internalIp"] = remotePort
 
 						answerPacket2["R-U-category"] = "5"
-						answerPacket2["R-U-cid"] = "158"
+						answerPacket2["R-U-cid"] = userId
 
 
 
@@ -632,6 +647,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["GID"] = "5459"
 						event.Client.WriteFESL("EGRQ", answerPacket2, 0x0)
 						tM.logAnswer("EGRQ", answerPacket2, 0x0)
+						log.Noteln(answerPacket2)
 
 
 
@@ -643,7 +659,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						log.Noteln("SENDING QLVT TO SERVER FOR PORT " + localPort)
 
 						ap := make(map[string]string)
-						ap["PID"] = "158"
+						ap["PID"] = pid
 						ap["LID"] = "1"
 						ap["GID"] = "5459"
 						//event.Client.WriteFESL("QLVT", ap, 0x0)

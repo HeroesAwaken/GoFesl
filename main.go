@@ -46,8 +46,8 @@ func emtpyHandler(w http.ResponseWriter, r *http.Request) {
 
 func relationship(w http.ResponseWriter, r *http.Request) {
 	log.Noteln(r.URL.String())
-	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>158</realid></update>")
-	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>158</realid></update>")
+	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
+	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
 }
 
 func sessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +93,7 @@ func main() {
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
 	r.HandleFunc("/relationships/roster/server:7eb6155c-ac70-4567-9fc4-732d56a9334a", relationship)
 	r.HandleFunc("/relationships/roster/nucleus:158", relationship)
+	r.HandleFunc("/relationships/roster/nucleus:1817224672", relationship)
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {

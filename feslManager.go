@@ -326,7 +326,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		loginPacket["profileId"] = strconv.Itoa(uID)
 		loginPacket["userId"] = strconv.Itoa(uID)
 		loginPacket["nuid"] = username
-		loginPacket["lkey"] = event.Command.Message["password"]
+		loginPacket["lkey"] = "12345"
 		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 		return
@@ -460,10 +460,10 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 		}
 
 		personaPacket["userInfo."+strconv.Itoa(k)+".userName"] = nickname
-		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = "100"
-		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = "158"
+		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
+		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = webId
 		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
-		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = "158"
+		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = webId
 
 		k++
 	}
@@ -679,6 +679,8 @@ func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 	loginPacket["TXN"] = "GetStats"
 
 	owner := event.Command.Message["owner"]
+
+	log.Noteln(event.Command.Message["owner"])
 
 	// TODO
 	// Check for mysql injection
