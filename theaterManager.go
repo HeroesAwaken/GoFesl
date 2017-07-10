@@ -69,6 +69,8 @@ var localPort string = ""
 var remotePort string = ""
 var localIP string = ""
 var remoteIP string = ""
+var userId string = ""
+
 
 // New creates and starts a new ClientManager
 func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client) {
@@ -212,7 +214,6 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	//event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	//tM.logAnswer("EGAM", answerPacket, 0x0)
 }
-
 
 func (tM *TheaterManager) GLST(event gs.EventClientFESLCommand) {
         if !event.Client.IsActive {
@@ -601,7 +602,6 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["cid"] = "158"
 
 
-
 						answerPacket2["R-USER"] = "Spencer"
 						answerPacket2["R-UID"] = "158"
 						answerPacket2["XUID"] = "158"
@@ -615,6 +615,7 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["R-U-dataCenter"] = "iad"
 						answerPacket2["R-U-externalIp"] = remoteIP
 						answerPacket2["R-U-internalIp"] = remotePort
+
 						answerPacket2["R-U-category"] = "5"
 						answerPacket2["R-U-cid"] = "158"
 

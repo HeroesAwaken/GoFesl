@@ -383,7 +383,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	loginPacket["profileId"] = strconv.Itoa(uID)
 	loginPacket["userId"] = strconv.Itoa(uID)
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = "12345"
+	loginPacket["lkey"] = keyHash
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -395,7 +395,7 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 	}
 
 
-	if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] != "Spencer" {
+	if event.Client.RedisState.Get("clientType") == "server" && (event.Command.Message["userInfo.0.userName"] != "Spencer" || event.Command.Message["userInfo.0.userName"] != "mDaWg") {
 		log.Noteln("LookupUserInfo - SERVER MODE")
 		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id =" + event.Client.RedisState.Get("uID"))
 		defer stmt.Close()
