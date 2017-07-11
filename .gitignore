@@ -7,3 +7,4 @@ debug*
 config.yml
 *.pem
 .remote-sync.json
+commands
