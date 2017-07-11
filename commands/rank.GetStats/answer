@@ -1,9 +1,9 @@
 {
 	"TXN": "GetStats",
-	"ownerId": "100",
+	"ownerId": "150",
 	"ownerType": "1",
 	"stats.0.key": "c_items",
-	"stats.0.value": "",
+	"stats.0.value": "1",
 	"stats.1.key": "c_wallet_hero",
 	"stats.1.value": "120",
 	"stats.2.key": "c_wallet_valor",

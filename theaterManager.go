@@ -15,6 +15,13 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// GameClient Represents a game client connected to theater
+type GameClient struct {
+	ip   string
+	port string
+}
+
+// GameServer Represents a game server and it's data
 type GameServer struct {
 	ip                 string
 	port               string
@@ -49,6 +56,10 @@ type GameServer struct {
 	communityName      string
 }
 
+// Servers a hashmap of servers
+var Servers = make(map[string]GameServer)
+
+// TheaterManager Handles incoming and outgoing theater communication
 type TheaterManager struct {
 	name             string
 	socket           *gs.Socket
@@ -62,17 +73,16 @@ type TheaterManager struct {
 	gameServerGlobal *core.RedisState
 }
 
-var wantsToJoin bool = false
-var canJoin bool = false
-var wantsToLeaveQueue bool = false
-var localPort string = ""
-var remotePort string = ""
-var localIP string = ""
-var remoteIP string = ""
-var userId string = ""
-var nickname string = ""
-var pid string = ""
-
+var wantsToJoin = false
+var canJoin = false
+var wantsToLeaveQueue = false
+var localPort = ""
+var remotePort = ""
+var localIP = ""
+var remoteIP = ""
+var userId = ""
+var nickname = ""
+var pid = ""
 
 // New creates and starts a new ClientManager
 func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client) {
@@ -153,6 +163,7 @@ func (tM *TheaterManager) run() {
 	}
 }
 
+// ECHO - SHARED called like some heartbeat
 func (tM *TheaterManager) ECHO(event gs.SocketUDPEvent) {
 	command := event.Data.(*gs.CommandFESL)
 
@@ -170,6 +181,7 @@ func (tM *TheaterManager) ECHO(event gs.SocketUDPEvent) {
 	tM.logAnswer("ECHO", answerPacket, 0x0)
 }
 
+// ECNL - CLIENT calls when they want to leave
 func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -185,7 +197,6 @@ func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 	event.Client.WriteFESL("ECNL", answerPacket, 0x0)
 	tM.logAnswer("ECNL", answerPacket, 0x0)
 
-
 	/*ap := make(map[string]string)
 	ap["TID"] = "7"
 	ap["GID"] = "5459"
@@ -194,6 +205,7 @@ func (tM *TheaterManager) ECNL(event gs.EventClientFESLCommand) {
 	tM.logAnswer("ECNLmisc", ap, 0x0)		*/
 }
 
+// EGAM - CLIENT called when a client wants to join a gameserver
 func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -219,7 +231,6 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 		return
 	}
 
-
 	err = stmt.QueryRow(event.Command.Message["R-U-accid"]).Scan(&pid, &nickname)
 
 	wantsToJoin = true
@@ -227,21 +238,20 @@ func (tM *TheaterManager) EGAM(event gs.EventClientFESLCommand) {
 	event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	tM.logAnswer("EGAM", answerPacket, 0x0)
 
-
 	//event.Client.WriteFESL("EGAM", answerPacket, 0x0)
 	//tM.logAnswer("EGAM", answerPacket, 0x0)
 }
 
+// GLST - CLIENT called to get a list of game servers? Irrelevant for heroes.
 func (tM *TheaterManager) GLST(event gs.EventClientFESLCommand) {
-        if !event.Client.IsActive {
-                log.Noteln("Client left")
-                return
-        }
-        log.Noteln("GLST was called")
+	if !event.Client.IsActive {
+		log.Noteln("Client left")
+		return
+	}
+	log.Noteln("GLST was called")
 }
 
-
-
+// CGAM - SERVER called to create a game
 func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -255,8 +265,8 @@ func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 		return
 	}
 
-	currentLobbyId := tM.gameServerGlobal.Get("Lobbies")
-	gameLid, _ := strconv.Atoi(currentLobbyId)
+	currentLobbyID := tM.gameServerGlobal.Get("Lobbies")
+	gameLid, _ := strconv.Atoi(currentLobbyID)
 	gameLid++
 
 	gameServer := new(core.RedisState)
@@ -294,6 +304,7 @@ func (tM *TheaterManager) CGAM(event gs.EventClientFESLCommand) {
 	tM.gameServerGlobal.Set("Lobbies", strconv.Itoa(gameLid))
 }
 
+// GDAT - CLIENT called to get data about the server
 func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -306,9 +317,6 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 
 	answerPacket := make(map[string]string)
 
-
-
-
 	answerPacket["TYPE"] = "G"
 	answerPacket["AP"] = "15"
 	answerPacket["B-U-server_port"] = "18569"
@@ -319,16 +327,16 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 	answerPacket["B-U-army_balance"] = "Balanced"
 	answerPacket["B-U-avail_slots_royal"] = "yes"
 	answerPacket["B-U-avail_slots_national"] = "yes"
-	answerPacket["I"] = "192.168.69.7"
+	answerPacket["I"] = "45.77.79.240"
 	answerPacket["B-U-data_center"] = "iad"
 	answerPacket["HU"] = "1"
 	answerPacket["B-U-army_distribution"] = "0,0,0,0,0,0,0,0,0,0,0"
 	answerPacket["F"] = "1"
 	answerPacket["B-maxObservers"] = "0"
-	answerPacket["N"] = "[iad]gs1-test.revive.systems(192.168.69.7%3a18569)"
+	answerPacket["N"] = "[iad]gs1-test.revive.systems(45.77.79.240%3a18569)"
 	answerPacket["NF"] = "0"
 	answerPacket["B-version"] = "1.02.1067.0"
-	answerPacket["B-U-server_ip"] = "192.168.69.7"
+	answerPacket["B-U-server_ip"] = "45.77.79.240"
 	answerPacket["B-U-community_name"] = "HeroesSV"
 	answerPacket["B-U-percent_full"] = "0"
 	answerPacket["MP"] = "16"
@@ -353,6 +361,7 @@ func (tM *TheaterManager) GDAT(event gs.EventClientFESLCommand) {
 
 }
 
+// LogCommandUDP log data to a debug file for further analysis
 func (tM *TheaterManager) LogCommandUDP(event *gs.CommandFESL) {
 	b, err := json.MarshalIndent(event.Message, "", "	")
 	if err != nil {
@@ -368,6 +377,7 @@ func (tM *TheaterManager) LogCommandUDP(event *gs.CommandFESL) {
 	}
 }
 
+// LogCommand log data to a debug file for further analysis
 func (tM *TheaterManager) LogCommand(event gs.EventClientFESLCommand) {
 	b, err := json.MarshalIndent(event.Command.Message, "", "	")
 	if err != nil {
@@ -398,6 +408,7 @@ func (tM *TheaterManager) logAnswer(msgType string, msgContent map[string]string
 	}
 }
 
+// LLST - CLIENT (???) unknown, potentially bookmarks
 func (tM *TheaterManager) LLST(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -424,6 +435,7 @@ func (tM *TheaterManager) LLST(event gs.EventClientFESLCommand) {
 	tM.logAnswer("LDAT", ldatPacket, 0x0)
 }
 
+// USER - SHARED Called to get user data about client? No idea
 func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -438,6 +450,7 @@ func (tM *TheaterManager) USER(event gs.EventClientFESLCommand) {
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
 
+// UBRA - SERVER Called to  update server data
 func (tM *TheaterManager) UBRA(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -450,6 +463,7 @@ func (tM *TheaterManager) UBRA(event gs.EventClientFESLCommand) {
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
 
+// UGAM - SERVER Called to udpate serverquery ifo
 func (tM *TheaterManager) UGAM(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -470,6 +484,7 @@ func (tM *TheaterManager) UGAM(event gs.EventClientFESLCommand) {
 	}
 }
 
+// CONN - SHARED (???) called on connection
 func (tM *TheaterManager) CONN(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -485,6 +500,7 @@ func (tM *TheaterManager) CONN(event gs.EventClientFESLCommand) {
 	tM.logAnswer(event.Command.Query, answerPacket, 0x0)
 }
 
+// EGRS - SERVER sent up, tell us if client is 'allowed' to join
 func (tM *TheaterManager) EGRS(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		return
@@ -497,6 +513,7 @@ func (tM *TheaterManager) EGRS(event gs.EventClientFESLCommand) {
 	event.Client.WriteFESL("EGRS", answerPacket, 0x0)
 }
 
+// PENT - SERVER sent up when a player joins (entitle player?)
 func (tM *TheaterManager) PENT(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		return
@@ -512,6 +529,7 @@ func (tM *TheaterManager) PENT(event gs.EventClientFESLCommand) {
 	event.Client.WriteFESL("PENT", answerPacket, 0x0)
 }
 
+// UPLA - SERVER presumably "update player"? valid response reqiured
 func (tM *TheaterManager) UPLA(event gs.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		return
@@ -525,9 +543,9 @@ func (tM *TheaterManager) UPLA(event gs.EventClientFESLCommand) {
 	answerPacket["TID"] = event.Command.Message["TID"]
 	answerPacket["PID"] = event.Command.Message["PID"]
 	answerPacket["P-cid"] = event.Command.Message["P-cid"]
+	log.Noteln(answerPacket)
 	event.Client.WriteFESL("UPLA", answerPacket, 0x0)
 }
-
 
 func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 	if !event.Client.IsActive {
@@ -566,18 +584,18 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 					return
 				}
 				if !event.Client.State.IsServer {
-					if (canJoin) {
+					if canJoin {
 						canJoin = false
 						log.Noteln("SENDING EGEG TO GAME CLIENT :D " + localPort)
 						ap := make(map[string]string)
 						ap["PL"] = "pc"
 						ap["TICKET"] = "2018751182"
 						ap["PID"] = pid
-						ap["I"] = "192.168.69.7"
+						ap["I"] = "45.77.79.240"
 						ap["P"] = "18569"
 						ap["HUID"] = "1"
 						ap["EKEY"] = "O65zZ2D2A58mNrZw1hmuJw%3d%3d"
-						ap["INT-IP"] = "192.168.69.7"
+						ap["INT-IP"] = "45.77.79.240"
 						ap["INT-PORT"] = "18569"
 						ap["SECRET"] = "2587913"
 						ap["UGID"] = "7eb6155c-ac70-4567-9fc4-732d56a9334a"
@@ -587,7 +605,6 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 
 						tM.logAnswer("EGEG", ap, 0x0)
 						log.Noteln(ap)
-
 
 					}
 				} else {
@@ -609,13 +626,11 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["INT-IP"] = localIP
 						answerPacket2["INT-PORT"] = localPort
 
-
 						answerPacket2["PTYPE"] = "P"
 
 						answerPacket2["R-cid"] = userId
 
 						answerPacket2["cid"] = userId
-
 
 						answerPacket2["R-USER"] = nickname
 						answerPacket2["R-UID"] = userId
@@ -634,22 +649,14 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						answerPacket2["R-U-category"] = "5"
 						answerPacket2["R-U-cid"] = userId
 
-
-
 						answerPacket2["R-INT-PORT"] = localPort
 						answerPacket2["R-INT-IP"] = localIP
-
-
-
-
 
 						answerPacket2["LID"] = "1"
 						answerPacket2["GID"] = "5459"
 						event.Client.WriteFESL("EGRQ", answerPacket2, 0x0)
 						tM.logAnswer("EGRQ", answerPacket2, 0x0)
 						log.Noteln(answerPacket2)
-
-
 
 						canJoin = true
 					}
@@ -665,7 +672,6 @@ func (tM *TheaterManager) newClient(event gs.EventNewClient) {
 						//event.Client.WriteFESL("QLVT", ap, 0x0)
 						tM.logAnswer("QLVT", ap, 0x0)
 					}
-
 
 				}
 			}

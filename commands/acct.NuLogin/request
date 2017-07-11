@@ -1,6 +1,6 @@
 {
 	"TXN": "NuLogin",
-	"encryptedInfo": "7f5d57c8d2382ef81cf8b5ac9671f315",
-	"macAddr": "$340300000000",
+	"encryptedInfo": "4d2c25c4422b599affcbce8818b8b3ef",
+	"macAddr": "$005056c00008",
 	"returnEncryptedInfo": "0"
 }

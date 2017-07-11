@@ -15,6 +15,7 @@ import (
 	"github.com/go-redis/redis"
 )
 
+// FeslManager - handles incoming and outgoing FESL data
 type FeslManager struct {
 	name          string
 	db            *sql.DB
@@ -88,6 +89,7 @@ func (fM *FeslManager) run() {
 	}
 }
 
+// LogCommand - logs detailed FESL command data to a file for further analysis
 func (fM *FeslManager) LogCommand(event gs.EventClientTLSCommand) {
 	b, err := json.MarshalIndent(event.Command.Message, "", "	")
 	if err != nil {
@@ -118,7 +120,7 @@ func (fM *FeslManager) logAnswer(msgType string, msgContent map[string]string, m
 	}
 }
 
-// Not being used right now
+// GetTelemetryToken - Not being used right now (maybe used in magma more?)
 func (fM *FeslManager) GetTelemetryToken(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -135,6 +137,7 @@ func (fM *FeslManager) GetTelemetryToken(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
+// Status - Basic fesl call to get overall service status (called before pnow?)
 func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -152,7 +155,6 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 	answerPacket["props.{resultType}"] = "JOIN"
 	answerPacket["props.{availableServerCount}"] = "1"
 
-
 	answerPacket["props.{games}.1.lid"] = "1"
 	answerPacket["props.{games}.1.fit"] = "1001"
 	answerPacket["props.{games}.1.gid"] = "1"
@@ -168,6 +170,7 @@ func (fM *FeslManager) Status(event gs.EventClientTLSCommand) {
 	fM.logAnswer("pnow", answerPacket, 0x80000000)
 }
 
+// Start - a method of pnow
 func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -185,6 +188,7 @@ func (fM *FeslManager) Start(event gs.EventClientTLSCommand) {
 	fM.Status(event)
 }
 
+// MysqlRealEscapeString - you know
 func MysqlRealEscapeString(value string) string {
 	replace := map[string]string{"\\": "\\\\", "'": `\'`, "\\0": "\\\\0", "\n": "\\n", "\r": "\\r", `"`: `\"`, "\x1a": "\\Z"}
 
@@ -195,6 +199,7 @@ func MysqlRealEscapeString(value string) string {
 	return value
 }
 
+// UpdateStats - updates stats about a soldier
 func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -242,6 +247,7 @@ func (fM *FeslManager) UpdateStats(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
+// GetPingSites - returns a list of endpoints to test for the lowest latency on a client
 func (fM *FeslManager) GetPingSites(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -269,6 +275,7 @@ func (fM *FeslManager) GetPingSites(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, answerPacket, event.Command.PayloadID)
 }
 
+// NuLoginPersona - soldier login command
 func (fM *FeslManager) NuLoginPersona(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -284,7 +291,7 @@ func (fM *FeslManager) NuLoginPersona(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
-// Done with redis CLIENT
+// NuLogin - master login command
 func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -326,7 +333,7 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 		loginPacket["profileId"] = strconv.Itoa(uID)
 		loginPacket["userId"] = strconv.Itoa(uID)
 		loginPacket["nuid"] = username
-		loginPacket["lkey"] = "12345"
+		loginPacket["lkey"] = event.Command.Message["password"]
 		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 		return
@@ -383,48 +390,50 @@ func (fM *FeslManager) NuLogin(event gs.EventClientTLSCommand) {
 	loginPacket["profileId"] = strconv.Itoa(uID)
 	loginPacket["userId"] = strconv.Itoa(uID)
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = keyHash
+	loginPacket["lkey"] = "12345"
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
+// NuLookupUserInfo - Gets basic information about a game user
 func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
 		return
 	}
 
+	if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] != "Spencer" {
+		if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] != "mDaWg" {
+			log.Noteln("LookupUserInfo - SERVER MODE")
+			stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id =" + event.Client.RedisState.Get("uID"))
+			defer stmt.Close()
+			if err != nil {
+				log.Errorln(err)
+				return
+			}
+			var name, sID string
 
-	if event.Client.RedisState.Get("clientType") == "server" && (event.Command.Message["userInfo.0.userName"] != "Spencer" || event.Command.Message["userInfo.0.userName"] != "mDaWg") {
-		log.Noteln("LookupUserInfo - SERVER MODE")
-		stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id =" + event.Client.RedisState.Get("uID"))
-		defer stmt.Close()
-		if err != nil {
-			log.Errorln(err)
+			err = stmt.QueryRow().Scan(&name, &sID)
+			if err != nil {
+				log.Errorln(err)
+				return
+			}
+
+			personaPacket := make(map[string]string)
+			personaPacket["TXN"] = "NuLookupUserInfo"
+			personaPacket["userInfo.0.userName"] = name
+			personaPacket["userInfo.0.userId"] = sID
+			personaPacket["userInfo.0.masterUserId"] = sID
+			personaPacket["userInfo.0.namespace"] = "MAIN"
+			personaPacket["userInfo.0.xuid"] = "158"
+			personaPacket["userInfo.0.cid"] = "158"
+			//personaPacket["user"] = "1"
+			personaPacket["userInfo.[]"] = strconv.Itoa(1)
+
+			event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+			fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 			return
 		}
-		var name, sID string
-
-		err = stmt.QueryRow().Scan(&name, &sID)
-		if err != nil {
-			log.Errorln(err)
-			return
-		}
-
-		personaPacket := make(map[string]string)
-		personaPacket["TXN"] = "NuLookupUserInfo"
-		personaPacket["userInfo.0.userName"] = name
-		personaPacket["userInfo.0.userId"] = sID
-		personaPacket["userInfo.0.masterUserId"] = sID
-		personaPacket["userInfo.0.namespace"] = "MAIN"
-		personaPacket["userInfo.0.xuid"] = "158"
-		personaPacket["userInfo.0.cid"] = "158"
-		//personaPacket["user"] = "1"
-		personaPacket["userInfo.[]"] = strconv.Itoa(1)
-
-		event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
-		fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
-		return
 	}
 
 	log.Noteln("LookupUserInfo - CLIENT MODE! " + event.Command.Message["userInfo.0.userName"])
@@ -473,9 +482,9 @@ func (fM *FeslManager) NuLookupUserInfo(event gs.EventClientTLSCommand) {
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 
-
 }
 
+// NuGetPersonas - Soldier data lookup call
 func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 
 	if !event.Client.IsActive {
@@ -561,6 +570,7 @@ func (fM *FeslManager) NuGetPersonas(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
 
+// NuGetAccount - General account information retrieved, based on parameters sent
 func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -583,6 +593,7 @@ func (fM *FeslManager) NuGetAccount(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
+// GetStatsForOwners - Gives a bunch of info for the Hero selection screen?
 func (fM *FeslManager) GetStatsForOwners(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")
@@ -669,6 +680,7 @@ func (fM *FeslManager) GetStatsForOwners(event gs.EventClientTLSCommand) {
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
 
+// GetStats - Get basic stats about a soldier/owner (account holder)
 func (fM *FeslManager) GetStats(event gs.EventClientTLSCommand) {
 	if !event.Client.IsActive {
 		log.Noteln("Client left")

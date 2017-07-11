@@ -1,9 +1,9 @@
 {
 	"TXN": "NuLookupUserInfo",
-	"userInfo.0.masterUserId": "158",
+	"userInfo.0.masterUserId": "1817224672",
 	"userInfo.0.namespace": "MAIN",
-	"userInfo.0.userId": "100",
-	"userInfo.0.userName": "Spencer",
-	"userInfo.0.xuid": "158",
+	"userInfo.0.userId": "150",
+	"userInfo.0.userName": "mDaWg",
+	"userInfo.0.xuid": "1817224672",
 	"userInfo.[]": "1"
 }
