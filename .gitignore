@@ -5,7 +5,6 @@ test*
 debug*
 *.zip
 config.yml
-*.pem
 .remote-sync.json
 commands
 HeroesLogin
