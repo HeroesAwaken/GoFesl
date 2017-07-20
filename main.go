@@ -8,25 +8,19 @@ import (
 	"runtime"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
+	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/ReviveNetwork/GoFesl/theater"
 	"github.com/go-redis/redis"
 
 	"net/http"
 	"net/http/pprof"
-
-	log "github.com/HeroesAwaken/GoAwaken/Log"
 )
 
 var (
-	// BuildTime of the build provided by the build command
-	BuildTime = "Not provided"
-	// GitHash of build provided by the build command
-	GitHash = "Not provided"
-	// GitBranch of the build provided by the build command
-	GitBranch = "Not provided"
 	// compileVersion we are receiving by the build command
 	CompileVersion = "0"
 	// Version of the Application
-	Version = "0.0.2"
+	Version = "0.0.5"
 
 	// MyConfig Default configuration
 	MyConfig = Config{
@@ -78,7 +72,7 @@ func main() {
 	}
 
 	log.SetLevel(*logLevel)
-	log.Notef("Starting up v%s - %s %s %s", Version, BuildTime, GitBranch, GitHash)
+	log.Notef("Starting up v%s", Version)
 
 	MyConfig.Load(*configPath)
 
@@ -127,9 +121,9 @@ func main() {
 	serverManager := new(FeslManager)
 	serverManager.New("SFM", "18051", *certFileFlag, *keyFileFlag, true, dbSQL, redisClient)
 
-	theaterManager := new(TheaterManager)
+	theaterManager := new(theater.TheaterManager)
 	theaterManager.New("TM", "18275", dbSQL, redisClient)
-	servertheaterManager := new(TheaterManager)
+	servertheaterManager := new(theater.TheaterManager)
 	servertheaterManager.New("STM", "18056", dbSQL, redisClient)
 
 	c := make(chan os.Signal, 1)

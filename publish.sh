@@ -1,9 +1,15 @@
-export GOPATH="C:\gopath"
+export REMOTE_USER="root"
+export REMOTE_HOST="app-heroes-login01.revive.systems"
+export REMOTE_IDENTITY="~/.ssh/id_rsa"
+export REMOTE_PATH="/opt/revive/"
 
-export GOOS=linux
-export GOARCH=amd64
+export BIN_NAME="HeroesLogin"
+export BIN_ARGS="-logLevel debug"
 
-go build -i -o HeroesLogin
+export LOCAL_GOPATH="C:/gopath"
+export GOOS="linux" #"win"?
+export GOARCH="amd64" #
 
-scp HeroesLogin root@104.156.227.155:/opt/revive
-ssh -i ~/.ssh/id_rsa root@104.156.227.155 chmod +x /opt/revive/HeroesLogin
+go build -i -o "$BIN_NAME"
+scp $BIN_NAME $REMOTE_USER@$REMOTE_HOST:$REMOTE_PATH
+ssh -t -i $REMOTE_IDENTITY $REMOTE_USER@$REMOTE_HOST "cd $REMOTE_PATH chmod +x $BIN_NAME && ulimit -Sv 500000 && ./$BIN_NAME $BIN_ARGS"

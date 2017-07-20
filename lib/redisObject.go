@@ -12,9 +12,9 @@ type RedisObject struct {
 }
 
 // New - Initialize a new key
-func (rS *RedisObject) New(redis *redis.Client, identifier string) {
+func (rS *RedisObject) New(redis *redis.Client, prefix string, identifier string) {
 	rS.redis = redis
-	rS.identifier = identifier
+	rS.identifier = prefix + ":" + identifier
 }
 
 // Get - Get value from the hash-map
