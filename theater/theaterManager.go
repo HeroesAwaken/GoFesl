@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
-	"github.com/ReviveNetwork/GoFesl/lib"
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/lib"
+	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/go-redis/redis"
 )
 

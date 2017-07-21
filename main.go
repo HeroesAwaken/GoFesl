@@ -8,8 +8,8 @@ import (
 	"runtime"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/ReviveNetwork/GoFesl/log"
-	"github.com/ReviveNetwork/GoFesl/theater"
+	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/theater"
 	"github.com/go-redis/redis"
 
 	"net/http"

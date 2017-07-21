@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
-	"github.com/ReviveNetwork/GoFesl/log"
-	"github.com/ReviveNetwork/GoFesl/matchmaking"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/matchmaking"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/go-redis/redis"

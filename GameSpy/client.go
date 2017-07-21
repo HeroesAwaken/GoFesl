@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 type Client struct {

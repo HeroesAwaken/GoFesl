@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // CONN - SHARED (???) called on connection

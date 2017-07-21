@@ -1,6 +1,6 @@
 package matchmaking
 
-import "github.com/ReviveNetwork/GoFesl/GameSpy"
+import "github.com/SpencerSharkey/GoFesl/GameSpy"
 
 // Games - a list of available games
 var Games = make(map[string]*GameSpy.Client)

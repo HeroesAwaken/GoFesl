@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 const gamespyLetters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ]["

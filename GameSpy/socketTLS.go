@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // Socket is a basic event-based TCP-Server

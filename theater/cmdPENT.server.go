@@ -1,6 +1,6 @@
 package theater
 
-import "github.com/ReviveNetwork/GoFesl/GameSpy"
+import "github.com/SpencerSharkey/GoFesl/GameSpy"
 
 // PENT - SERVER sent up when a player joins (entitle player?)
 func (tM *TheaterManager) PENT(event GameSpy.EventClientFESLCommand) {

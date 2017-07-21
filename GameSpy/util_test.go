@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
 )
 
 func TestShortHash(t *testing.T) {

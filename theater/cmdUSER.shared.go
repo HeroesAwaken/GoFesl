@@ -1,8 +1,8 @@
 package theater
 
 import (
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
-	"github.com/ReviveNetwork/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // USER - SHARED Called to get user data about client? No idea
