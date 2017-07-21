@@ -113,6 +113,20 @@ func (socket *SocketTLS) run() {
 					Error: err,
 				},
 			}
+			conn.Close()
+			continue
+		}
+
+		err = tlscon.Handshake()
+		if err != nil {
+			log.Errorf("%s: A new client connecting threw an error.\n%v", socket.name, err)
+			socket.eventChan <- SocketEvent{
+				Name: "error",
+				Data: EventError{
+					Error: err,
+				},
+			}
+			tlscon.Close()
 			continue
 		}
 
@@ -131,6 +145,7 @@ func (socket *SocketTLS) run() {
 					Error: err,
 				},
 			}
+			tlscon.Close()
 		}
 		go socket.handleClientEvents(newClient, clientEventSocket)
 
