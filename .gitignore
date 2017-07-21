@@ -8,3 +8,4 @@ config.yml
 .remote-sync.json
 commands
 HeroesLogin
+*.pem
