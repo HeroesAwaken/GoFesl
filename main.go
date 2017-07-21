@@ -16,8 +16,29 @@ import (
 	"net/http/pprof"
 )
 
+// Initialize flag-parameters and config
+func init() {
+	flag.StringVar(&configPath, "config", "config.yml", "Path to yml configuration file")
+	flag.StringVar(&logLevel, "logLevel", "error", "LogLevel [error|warning|note|debug]")
+	flag.StringVar(&certFileFlag, "cert", "cert.pem", "[HTTPS] Location of your certification file. Env: LOUIS_HTTPS_CERT")
+	flag.StringVar(&keyFileFlag, "key", "key.pem", "[HTTPS] Location of your private key file. Env: LOUIS_HTTPS_KEY")
+	flag.Parse()
+
+	log.SetLevel(logLevel)
+	MyConfig.Load(configPath)
+
+	if CompileVersion != "0" {
+		Version = Version + "." + CompileVersion
+	}
+}
+
 var (
-	// compileVersion we are receiving by the build command
+	configPath   string
+	logLevel     string
+	certFileFlag string
+	keyFileFlag  string
+
+	// CompileVersion we are receiving by the build command
 	CompileVersion = "0"
 	// Version of the Application
 	Version = "0.0.5"
@@ -59,22 +80,7 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	var (
-		configPath   = flag.String("config", "config.yml", "Path to yml configuration file")
-		logLevel     = flag.String("logLevel", "error", "LogLevel [error|warning|note|debug]")
-		certFileFlag = flag.String("cert", "cert.pem", "[HTTPS] Location of your certification file. Env: LOUIS_HTTPS_CERT")
-		keyFileFlag  = flag.String("key", "key.pem", "[HTTPS] Location of your private key file. Env: LOUIS_HTTPS_KEY")
-	)
-	flag.Parse()
-
-	if CompileVersion != "0" {
-		Version = Version + "." + CompileVersion
-	}
-
-	log.SetLevel(*logLevel)
 	log.Notef("Starting up v%s", Version)
-
-	MyConfig.Load(*configPath)
 
 	r := http.NewServeMux()
 
@@ -94,7 +100,7 @@ func main() {
 		log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
 	}()
 	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", *certFileFlag, *keyFileFlag, r))
+		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
 	}()
 	// Startup done
 
@@ -117,9 +123,9 @@ func main() {
 	}
 
 	feslManager := new(FeslManager)
-	feslManager.New("FM", "18270", *certFileFlag, *keyFileFlag, false, dbSQL, redisClient)
+	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient)
 	serverManager := new(FeslManager)
-	serverManager.New("SFM", "18051", *certFileFlag, *keyFileFlag, true, dbSQL, redisClient)
+	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient)
 
 	theaterManager := new(theater.TheaterManager)
 	theaterManager.New("TM", "18275", dbSQL, redisClient)
