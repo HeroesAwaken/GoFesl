@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 
@@ -24,10 +25,11 @@ type FeslManager struct {
 	batchTicker   *time.Ticker
 	stopTicker    chan bool
 	server        bool
+	iDB           *core.InfluxDB
 }
 
 // New creates and starts a new ClientManager
-func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client) {
+func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
 	var err error
 
 	fM.socket = new(GameSpy.SocketTLS)
@@ -37,12 +39,31 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.eventsChannel, err = fM.socket.New(fM.name, port, certFile, keyFile)
 	fM.stopTicker = make(chan bool, 1)
 	fM.server = server
+	fM.iDB = iDB
 
 	if err != nil {
 		log.Errorln(err)
 	}
 
+	// Collect metrics every 10 seconds
+	fM.batchTicker = time.NewTicker(time.Second * 1)
+	go func() {
+		for range fM.batchTicker.C {
+			fM.collectMetrics()
+		}
+	}()
+
 	go fM.run()
+}
+
+func (fM *FeslManager) collectMetrics() {
+	// Create a point and add to batch
+	tags := map[string]string{"clients": "clients-total", "server": "feslManager"}
+	fields := map[string]interface{}{
+		"clients": len(fM.socket.ClientsTLS),
+	}
+
+	fM.iDB.AddMetric("clients_total", tags, fields)
 }
 
 func (fM *FeslManager) run() {

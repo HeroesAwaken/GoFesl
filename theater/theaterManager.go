@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -66,12 +67,13 @@ type TheaterManager struct {
 	batchTicker      *time.Ticker
 	stopTicker       chan bool
 	cacheCounters    *lib.RedisObject
+	iDB              *core.InfluxDB
 }
 
 const COUNTER_GID_KEY = "counters:GID"
 
 // New creates and starts a new TheaterManager
-func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client) {
+func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
 	var err error
 
 	tM.socket = new(GameSpy.Socket)
@@ -80,6 +82,7 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	tM.redis = redis
 	tM.name = name
 	tM.eventsChannel, err = tM.socket.New(tM.name, port, true)
+	tM.iDB = iDB
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -89,9 +92,27 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	}
 	tM.stopTicker = make(chan bool, 1)
 
+	// Collect metrics every 10 seconds
+	tM.batchTicker = time.NewTicker(time.Second * 1)
+	go func() {
+		for range tM.batchTicker.C {
+			tM.collectMetrics()
+		}
+	}()
+
 	//tM.redis.Set(COUNTER_GID_KEY, 0, 0)
 
 	go tM.run()
+}
+
+func (tM *TheaterManager) collectMetrics() {
+	// Create a point and add to batch
+	tags := map[string]string{"clients": "clients-total", "server": "theaterManager"}
+	fields := map[string]interface{}{
+		"clients": len(tM.socket.Clients),
+	}
+
+	tM.iDB.AddMetric("clients_total", tags, fields)
 }
 
 func (tM *TheaterManager) run() {

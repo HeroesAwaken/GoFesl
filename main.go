@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/fesl"
@@ -42,7 +43,7 @@ var (
 	// CompileVersion we are receiving by the build command
 	CompileVersion = "0"
 	// Version of the Application
-	Version = "0.0.5"
+	Version = "0.0.6"
 
 	// MyConfig Default configuration
 	MyConfig = Config{
@@ -53,6 +54,8 @@ var (
 	}
 
 	mem runtime.MemStats
+
+	AppName = "HeroesServer"
 )
 
 func emtpyHandler(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +81,20 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 		log.Noteln("<success><token code=\"NEW_TOKEN\">" + userKey.Value + "</token></success>")
 		fmt.Fprintf(w, "<success><token code=\"NEW_TOKEN\">"+userKey.Value+"</token></success>")
 	}
+}
+
+func collectGlobalMetrics(iDB *core.InfluxDB) {
+	runtime.ReadMemStats(&mem)
+	tags := map[string]string{"metric": "server_metrics", "server": "global"}
+	fields := map[string]interface{}{
+		"memAlloc":      int(mem.Alloc),
+		"memTotalAlloc": int(mem.TotalAlloc),
+		"memHeapAlloc":  int(mem.HeapAlloc),
+		"memHeapSys":    int(mem.HeapSys),
+	}
+
+	iDB.AddMetric("server_metrics", tags, fields)
+	iDB.Flush()
 }
 
 func main() {
@@ -123,15 +140,29 @@ func main() {
 		log.Fatalln("Error connecting to redis:", err)
 	}
 
+	// Influx Connection
+	metricConnection := new(core.InfluxDB)
+	err = metricConnection.New(MyConfig.InfluxDBHost, MyConfig.InfluxDBDatabase, MyConfig.InfluxDBUser, MyConfig.InfluxDBPassword, AppName, Version)
+	if err != nil {
+		log.Fatalln("Error connecting to MetricsDB:", err)
+	}
+
+	globalMetrics := time.NewTicker(time.Second * 10)
+	go func() {
+		for range globalMetrics.C {
+			collectGlobalMetrics(metricConnection)
+		}
+	}()
+
 	feslManager := new(fesl.FeslManager)
-	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient)
+	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection)
 	serverManager := new(fesl.FeslManager)
-	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient)
+	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient, metricConnection)
 
 	theaterManager := new(theater.TheaterManager)
-	theaterManager.New("TM", "18275", dbSQL, redisClient)
+	theaterManager.New("TM", "18275", dbSQL, redisClient, metricConnection)
 	servertheaterManager := new(theater.TheaterManager)
-	servertheaterManager.New("STM", "18056", dbSQL, redisClient)
+	servertheaterManager.New("STM", "18056", dbSQL, redisClient, metricConnection)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
