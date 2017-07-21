@@ -6,6 +6,6 @@
 	"domainPartition.subDomain": "bfwest-dedicated",
 	"messengerIp": "messaging.ea.com",
 	"messengerPort": "13505",
-	"theaterIp": "mgm.reviveheroes.com",
+	"theaterIp": "127.0.0.1",
 	"theaterPort": "18275"
 }
