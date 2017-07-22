@@ -15,7 +15,7 @@ func (fM *FeslManager) NuGetAccount(event GameSpy.EventClientTLSCommand) {
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuGetAccount"
 	loginPacket["heroName"] = event.Client.RedisState.Get("username")
-	loginPacket["nuid"] = event.Client.RedisState.Get("username") + "@reviveheroes.com"
+	loginPacket["nuid"] = event.Client.RedisState.Get("email")
 	loginPacket["DOBDay"] = "1"
 	loginPacket["DOBMonth"] = "1"
 	loginPacket["DOBYear"] = "2017"

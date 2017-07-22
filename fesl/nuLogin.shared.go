@@ -49,6 +49,7 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 	saveRedis["uID"] = id
 	saveRedis["username"] = username
 	saveRedis["sessionID"] = gameToken
+	saveRedis["email"] = email
 	event.Client.RedisState.SetM(saveRedis)
 
 	loginPacket := make(map[string]string)
