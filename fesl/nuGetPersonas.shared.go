@@ -19,14 +19,7 @@ func (fM *FeslManager) NuGetPersonas(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
-	stmt, err := fM.db.Prepare("SELECT nickname, pid FROM heroes_soldiers WHERE uid = ?")
-	log.Noteln(stmt)
-	defer stmt.Close()
-	if err != nil {
-		return
-	}
-
-	rows, err := stmt.Query(event.Client.RedisState.Get("uID"))
+	rows, err := fM.stmtGetHeroesByUserID.Query(event.Client.RedisState.Get("uID"))
 	if err != nil {
 		return
 	}
@@ -36,15 +29,14 @@ func (fM *FeslManager) NuGetPersonas(event GameSpy.EventClientTLSCommand) {
 
 	var i = 0
 	for rows.Next() {
-		var username string
-		var pid int
-		err := rows.Scan(&username, &pid)
+		var id, userID, heroName, online string
+		err := rows.Scan(&id, &userID, &heroName, &online)
 		if err != nil {
 			log.Errorln(err)
 			return
 		}
-		personaPacket["personas."+strconv.Itoa(i)] = username
-		event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), strconv.Itoa(pid))
+		personaPacket["personas."+strconv.Itoa(i)] = heroName
+		event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), id)
 		i++
 	}
 
@@ -59,15 +51,9 @@ func (fM *FeslManager) NuGetPersonas(event GameSpy.EventClientTLSCommand) {
 // NuGetPersonasServer - Soldier data lookup call for servers
 func (fM *FeslManager) NuGetPersonasServer(event GameSpy.EventClientTLSCommand) {
 	log.Noteln("We are a server NuGetPersonas")
-	// Server login
-	stmt, err := fM.db.Prepare("SELECT name, id FROM revive_heroes_servers WHERE id = ?")
-	log.Noteln(stmt)
-	defer stmt.Close()
-	if err != nil {
-		return
-	}
 
-	rows, err := stmt.Query(event.Client.RedisState.Get("uID"))
+	// Server login
+	rows, err := fM.stmtGetServerByID.Query(event.Client.RedisState.Get("uID"))
 	if err != nil {
 		return
 	}
@@ -77,15 +63,14 @@ func (fM *FeslManager) NuGetPersonasServer(event GameSpy.EventClientTLSCommand) 
 
 	var i = 0
 	for rows.Next() {
-		var name string
-		var id int
-		err := rows.Scan(&name, &id)
+		var id, userID, servername, secretKey, username string
+		err := rows.Scan(&id, &userID, &servername, &secretKey, &username)
 		if err != nil {
 			log.Errorln(err)
 			return
 		}
-		personaPacket["personas."+strconv.Itoa(i)] = name
-		event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), strconv.Itoa(id))
+		personaPacket["personas."+strconv.Itoa(i)] = servername
+		event.Client.RedisState.Set("ownerId."+strconv.Itoa(i+1), id)
 		i++
 	}
 

@@ -32,7 +32,9 @@ type FeslManager struct {
 	// Database Statements
 	stmtGetUserByGameToken              *sql.Stmt
 	stmtGetServerBySecret               *sql.Stmt
+	stmtGetServerByID                   *sql.Stmt
 	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
+	stmtGetHeroesByUserID               *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
 }
 
@@ -113,6 +115,16 @@ func (fM *FeslManager) prepareStatements() {
 		log.Fatalln("Error preparing stmtGetServerBySecret.", err.Error())
 	}
 
+	fM.stmtGetServerByID, err = fM.db.Prepare(
+		"SELECT game_servers.id, users.id, game_servers.servername, game_servers.secretKey, users.username" +
+			"	FROM game_servers" +
+			"	LEFT JOIN users" +
+			"		ON users.id=game_servers.user_id" +
+			"	WHERE game_servers.id = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetServerByID.", err.Error())
+	}
+
 	fM.stmtGetCountOfPermissionByIDAndSlug, err = fM.db.Prepare(
 		"SELECT count(permissions.slug)" +
 			"	FROM users" +
@@ -127,12 +139,21 @@ func (fM *FeslManager) prepareStatements() {
 	if err != nil {
 		log.Fatalln("Error preparing stmtGetCountOfPermissionByIdAndSlug.", err.Error())
 	}
+
+	fM.stmtGetHeroesByUserID, err = fM.db.Prepare(
+		"SELECT id, user_id, heroName, online" +
+			"	FROM game_heroes" +
+			"	WHERE user_id = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetHeroesByUserID.", err.Error())
+	}
 }
 
 func (fM *FeslManager) closeStatements() {
 	fM.stmtGetUserByGameToken.Close()
 	fM.stmtGetServerBySecret.Close()
 	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
+	fM.stmtGetHeroesByUserID.Close()
 
 	// Close the dynamic lenght getStats statements
 	for index := range fM.mapGetStatsVariableAmount {
