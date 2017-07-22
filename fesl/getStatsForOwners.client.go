@@ -2,7 +2,6 @@ package fesl
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -25,71 +24,42 @@ func (fM *FeslManager) GetStatsForOwners(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
-	pids := []interface{}{}
-	for i := 1; i <= numOfHeroesInt; i++ {
-		pids = append(pids, event.Client.RedisState.Get("ownerId."+strconv.Itoa(i)))
-	}
+	i := 1
+	for i = 1; i <= numOfHeroesInt; i++ {
+		ownerID := event.Client.RedisState.Get("ownerId." + strconv.Itoa(i))
 
-	// TODO
-	// Check for mysql injection
-	var query string
-	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
-	for i := 0; i < keys; i++ {
-		query += event.Command.Message["keys."+strconv.Itoa(i)+""] + ", "
-	}
+		loginPacket["stats."+strconv.Itoa(i-1)+".ownerId"] = ownerID
+		loginPacket["stats."+strconv.Itoa(i-1)+".ownerType"] = "1"
 
-	// Result is your slice string.
-	rawResult := make([][]byte, keys+1)
-	result := make([]string, keys+1)
-
-	dest := make([]interface{}, keys+1) // A temporary interface{} slice
-	for i, _ := range rawResult {
-		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
-	}
-
-	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM awaken_heroes_stats WHERE pid IN (?" + strings.Repeat(",?", len(pids)-1) + ")")
-	defer stmt.Close()
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-
-	rows, err := stmt.Query(pids...)
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-
-	var k = 0
-	for rows.Next() {
-		err := rows.Scan(dest...)
-		if err != nil {
-			log.Errorln(err)
-			return
-		}
-
-		for i, raw := range rawResult {
-			if raw == nil {
-				result[i] = "\\N"
-			} else {
-				result[i] = string(raw)
-			}
-		}
-
+		// Generate our argument list for the statement -> heroID, key1, key2, key3, ...
+		var args []interface{}
+		args = append(args, ownerID)
 		keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
-
-		loginPacket["stats."+strconv.Itoa(k)+".ownerId"] = result[len(result)-1]
-		loginPacket["stats."+strconv.Itoa(k)+".ownerType"] = "1"
-		loginPacket["stats."+strconv.Itoa(k)+".stats.[]"] = event.Command.Message["keys.[]"]
 		for i := 0; i < keys; i++ {
-			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
-			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".value"] = result[i]
-			loginPacket["stats."+strconv.Itoa(k)+".stats."+strconv.Itoa(i)+".text"] = result[i]
+			args = append(args, event.Command.Message["keys."+strconv.Itoa(i)+""])
 		}
-		k++
+
+		rows, err := fM.getStatsStatement(keys).Query(args...)
+		if err != nil {
+			log.Errorln("Failed gettings stats for hero "+ownerID, err.Error())
+		}
+
+		count := 0
+		for rows.Next() {
+			var heroID, key, value string
+			err := rows.Scan(&heroID, &key, &value)
+			if err != nil {
+				log.Errorln("Issue with database:", err.Error())
+			}
+
+			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".key"] = key
+			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".value"] = value
+			count++
+		}
+		loginPacket["stats."+strconv.Itoa(i-1)+".stats.[]"] = strconv.Itoa(count)
 	}
 
-	loginPacket["stats.[]"] = strconv.Itoa(k)
+	loginPacket["stats.[]"] = strconv.Itoa(i - 1)
 
 	event.Client.WriteFESL(event.Command.Query, loginPacket, 0xC0000007)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
