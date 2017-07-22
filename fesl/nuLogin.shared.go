@@ -2,6 +2,7 @@ package fesl
 
 import (
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 
@@ -19,12 +20,12 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 
 		err := fM.stmtGetServerBySecret.QueryRow(event.Command.Message["password"]).Scan(&id, &userID, &servername, &secretKey, &username)
 		if err != nil {
-			loginPacket := make(map[string]string)
-			loginPacket["TXN"] = "NuLogin"
-			loginPacket["localizedMessage"] = "\"The password the user specified is incorrect\""
-			loginPacket["errorContainer.[]"] = "0"
-			loginPacket["errorCode"] = "122"
-			event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+			packet := lib.NewPacket().
+				AddField("TXN", "NuLogin").
+				AddField("localizedMessage", "\"The password the user specified is incorrect\"").
+				AddField("errorContainer.[]", "0").
+				AddField("errorCode", "122")
+			event.Client.WriteFESL(event.Command.Query, packet.Raw(), event.Command.PayloadID)
 			return
 		}
 
