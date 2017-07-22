@@ -2,5 +2,7 @@
 	"TXN": "GetStats",
 	"ownerId": "1",
 	"ownerType": "1",
-	"stats.[]": "0"
+	"stats.0.key": "c_ltp",
+	"stats.0.value": "8950.0000",
+	"stats.[]": "1"
 }

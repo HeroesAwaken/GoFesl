@@ -17,6 +17,8 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 	answer := event.Command.Message
 	answer["TXN"] = "UpdateStats"
 
+	userId := event.Client.RedisState.Get("uID")
+
 	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
 	for i := 0; i < users; i++ {
 		owner, ok := event.Command.Message["u."+strconv.Itoa(i)+".o"]
@@ -25,9 +27,9 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 			return
 		}
 
-		// Generate our argument list for the statement -> owner, key1, value1, owner, key2, value2, owner, ...
+		// Generate our argument list for the statement -> userId, owner, key1, value1, userId, owner, key2, value2, userId, owner, ...
 		var args []interface{}
-		keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
+		keys, _ := strconv.Atoi(event.Command.Message["u."+strconv.Itoa(i)+".s.[]"])
 		for j := 0; j < keys; j++ {
 
 			key := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"]
@@ -39,6 +41,7 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 
 			// We need to append 3 values for each insert/update,
 			// owner, key and value
+			args = append(args, userId)
 			args = append(args, owner)
 			args = append(args, key)
 			args = append(args, value)

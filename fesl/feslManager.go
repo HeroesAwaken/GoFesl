@@ -85,9 +85,10 @@ func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
 		query += "?, "
 	}
 
-	sql := "SELECT heroID, statsKey, statsValue" +
+	sql := "SELECT user_id, heroID, statsKey, statsValue" +
 		"	FROM game_stats" +
 		"	WHERE heroID=?" +
+		"		AND user_id=?" +
 		"		AND statsKey IN (" + query + "?)"
 
 	fM.mapGetStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
@@ -108,12 +109,12 @@ func (fM *FeslManager) setStatsStatement(statsAmount int) *sql.Stmt {
 
 	var query string
 	for i := 1; i < statsAmount; i++ {
-		query += "(?, ?, ?), "
+		query += "(?, ?, ?, ?), "
 	}
 
 	sql := "INSERT INTO game_stats" +
-		"	(heroID, statsKey, statsValue)" +
-		"	VALUES " + query + "(?, ?, ?)" +
+		"	(user_id, heroID, statsKey, statsValue)" +
+		"	VALUES " + query + "(?, ?, ?, ?)" +
 		"	ON DUPLICATE KEY UPDATE" +
 		"	statsValue=VALUES(statsValue)"
 

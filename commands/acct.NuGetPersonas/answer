@@ -1,4 +1,5 @@
 {
 	"TXN": "NuGetPersonas",
-	"personas.[]": "0"
+	"personas.0": "MakaHost",
+	"personas.[]": "1"
 }

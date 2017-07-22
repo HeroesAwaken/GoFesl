@@ -15,6 +15,7 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 	}
 
 	owner := event.Command.Message["owner"]
+	userId := event.Client.RedisState.Get("uID")
 	log.Noteln(event.Command.Message["owner"])
 
 	loginPacket := make(map[string]string)
@@ -22,9 +23,10 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 	loginPacket["ownerId"] = owner
 	loginPacket["ownerType"] = "1"
 
-	// Generate our argument list for the statement -> heroID, key1, key2, key3, ...
+	// Generate our argument list for the statement -> heroID, userID, key1, key2, key3, ...
 	var args []interface{}
 	args = append(args, owner)
+	args = append(args, userId)
 	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
 	for i := 0; i < keys; i++ {
 		args = append(args, event.Command.Message["keys."+strconv.Itoa(i)+""])
@@ -37,14 +39,14 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 
 	count := 0
 	for rows.Next() {
-		var heroID, key, value string
-		err := rows.Scan(&heroID, &key, &value)
+		var userID, heroID, statsKey, statsValue string
+		err := rows.Scan(&userID, &heroID, &statsKey, &statsValue)
 		if err != nil {
 			log.Errorln("Issue with database:", err.Error())
 		}
 
-		loginPacket["stats."+strconv.Itoa(count)+".key"] = key
-		loginPacket["stats."+strconv.Itoa(count)+".value"] = value
+		loginPacket["stats."+strconv.Itoa(count)+".key"] = statsKey
+		loginPacket["stats."+strconv.Itoa(count)+".value"] = statsValue
 		count++
 	}
 	loginPacket["stats.[]"] = strconv.Itoa(count)
