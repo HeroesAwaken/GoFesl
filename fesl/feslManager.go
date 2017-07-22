@@ -26,6 +26,11 @@ type FeslManager struct {
 	stopTicker    chan bool
 	server        bool
 	iDB           *core.InfluxDB
+
+	// Database Statements
+	stmtGetUserByGameToken              *sql.Stmt
+	stmtGetServerBySecret               *sql.Stmt
+	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
 }
 
 // New creates and starts a new ClientManager
@@ -41,6 +46,9 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.server = server
 	fM.iDB = iDB
 
+	// Prepare database statements
+	fM.prepareStatements()
+
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -54,6 +62,65 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	}()
 
 	go fM.run()
+}
+
+func (fM *FeslManager) prepareStatements() {
+	var err error
+
+	fM.stmtGetUserByGameToken, err = fM.db.Prepare(
+		"SELECT id, username, email, birthday, language, country, game_token" +
+			"	FROM users" +
+			"	WHERE game_token = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetUserByGameToken.", err.Error())
+	}
+
+	fM.stmtGetServerBySecret, err = fM.db.Prepare(
+		"SELECT game_servers.id, users.id, game_servers.servername, game_servers.secretKey, users.username" +
+			"	FROM game_servers" +
+			"	LEFT JOIN users" +
+			"		ON users.id=game_servers.user_id" +
+			"	WHERE secretKey = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetServerBySecret.", err.Error())
+	}
+
+	fM.stmtGetCountOfPermissionByIDAndSlug, err = fM.db.Prepare(
+		"SELECT count(permissions.slug)" +
+			"	FROM users" +
+			"	LEFT JOIN role_user" +
+			"		ON users.id=role_user.user_id" +
+			"	LEFT JOIN permission_role" +
+			"		ON permission_role.role_id=role_user.role_id" +
+			"	LEFT JOIN permissions" +
+			"		ON permissions.id=permission_role.permission_id" +
+			"	WHERE users.id = ?" +
+			"		AND permissions.slug = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetCountOfPermissionByIdAndSlug.", err.Error())
+	}
+}
+
+func (fM *FeslManager) closeStatements() {
+	fM.stmtGetUserByGameToken.Close()
+	fM.stmtGetServerBySecret.Close()
+	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
+}
+
+func (fM *FeslManager) userHasPermission(id string, slug string) bool {
+
+	var count int
+	err := fM.stmtGetCountOfPermissionByIDAndSlug.QueryRow(id, slug).Scan(&count)
+	if err != nil {
+		return false
+	}
+
+	// If user has at least on role allowing that permission, return true
+	if count > 0 {
+		return true
+	}
+
+	return false
 }
 
 func (fM *FeslManager) collectMetrics() {
@@ -107,6 +174,9 @@ func (fM *FeslManager) run() {
 			}
 		}
 	}
+
+	// Close all database statements
+	fM.closeStatements()
 }
 
 // LogCommand - logs detailed FESL command data to a file for further analysis
