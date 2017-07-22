@@ -35,6 +35,7 @@ type FeslManager struct {
 	stmtGetServerByID                   *sql.Stmt
 	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
 	stmtGetHeroesByUserID               *sql.Stmt
+	stmtGetHeroeByName                  *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
 }
 
@@ -147,6 +148,14 @@ func (fM *FeslManager) prepareStatements() {
 	if err != nil {
 		log.Fatalln("Error preparing stmtGetHeroesByUserID.", err.Error())
 	}
+
+	fM.stmtGetHeroeByName, err = fM.db.Prepare(
+		"SELECT id, user_id, heroName, online" +
+			"	FROM game_heroes" +
+			"	WHERE heroName = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetHeroesByUserID.", err.Error())
+	}
 }
 
 func (fM *FeslManager) closeStatements() {
@@ -154,6 +163,7 @@ func (fM *FeslManager) closeStatements() {
 	fM.stmtGetServerBySecret.Close()
 	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
 	fM.stmtGetHeroesByUserID.Close()
+	fM.stmtGetHeroeByName.Close()
 
 	// Close the dynamic lenght getStats statements
 	for index := range fM.mapGetStatsVariableAmount {

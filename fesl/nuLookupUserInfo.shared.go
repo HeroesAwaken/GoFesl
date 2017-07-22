@@ -2,7 +2,6 @@ package fesl
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -22,46 +21,27 @@ func (fM *FeslManager) NuLookupUserInfo(event GameSpy.EventClientTLSCommand) {
 
 	log.Noteln("LookupUserInfo - CLIENT MODE! " + event.Command.Message["userInfo.0.userName"])
 
-	userNames := []interface{}{}
-	keys, _ := strconv.Atoi(event.Command.Message["userInfo.[]"])
-	for i := 0; i < keys; i++ {
-		userNames = append(userNames, event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"])
-	}
-
-	stmt, err := fM.db.Prepare("SELECT nickname, uid, pid FROM heroes_soldiers WHERE nickname IN (?" + strings.Repeat(",?", len(userNames)-1) + ")")
-	defer stmt.Close()
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-
-	rows, err := stmt.Query(userNames...)
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-
 	personaPacket := make(map[string]string)
 	personaPacket["TXN"] = "NuLookupUserInfo"
-	var k = 0
-	for rows.Next() {
-		var nickname, webId, pid string
-		err := rows.Scan(&nickname, &webId, &pid)
+
+	keys, _ := strconv.Atoi(event.Command.Message["userInfo.[]"])
+	for i := 0; i < keys; i++ {
+		heroNamePacket := event.Command.Message["userInfo."+strconv.Itoa(i)+".userName"]
+
+		var id, userID, heroName, online string
+		err := fM.stmtGetHeroeByName.QueryRow(heroNamePacket).Scan(&id, &userID, &heroName, &online)
 		if err != nil {
-			log.Errorln(err)
 			return
 		}
 
-		personaPacket["userInfo."+strconv.Itoa(k)+".userName"] = nickname
-		personaPacket["userInfo."+strconv.Itoa(k)+".userId"] = pid
-		personaPacket["userInfo."+strconv.Itoa(k)+".masterUserId"] = pid
-		personaPacket["userInfo."+strconv.Itoa(k)+".namespace"] = "MAIN"
-		personaPacket["userInfo."+strconv.Itoa(k)+".xuid"] = webId
-
-		k++
+		personaPacket["userInfo."+strconv.Itoa(i)+".userName"] = heroName
+		personaPacket["userInfo."+strconv.Itoa(i)+".userId"] = id
+		personaPacket["userInfo."+strconv.Itoa(i)+".masterUserId"] = userID
+		personaPacket["userInfo."+strconv.Itoa(i)+".namespace"] = "MAIN"
+		personaPacket["userInfo."+strconv.Itoa(i)+".xuid"] = userID
 	}
-	//personaPacket["user"] = "1"
-	personaPacket["userInfo.[]"] = strconv.Itoa(k)
+
+	personaPacket["userInfo.[]"] = strconv.Itoa(keys)
 
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
@@ -70,5 +50,25 @@ func (fM *FeslManager) NuLookupUserInfo(event GameSpy.EventClientTLSCommand) {
 
 // NuLookupUserInfoServer - Gets basic information about a game user
 func (fM *FeslManager) NuLookupUserInfoServer(event GameSpy.EventClientTLSCommand) {
+	var err error
 
+	var id, userID, servername, secretKey, username string
+	err = fM.stmtGetServerByID.QueryRow(event.Client.RedisState.Get("uID")).Scan(&id, &userID, &servername, &secretKey, &username)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	personaPacket := make(map[string]string)
+	personaPacket["TXN"] = "NuLookupUserInfo"
+	personaPacket["userInfo.0.userName"] = servername
+	personaPacket["userInfo.0.userId"] = id
+	personaPacket["userInfo.0.masterUserId"] = userID
+	personaPacket["userInfo.0.namespace"] = "MAIN"
+	personaPacket["userInfo.0.xuid"] = userID
+	personaPacket["userInfo.0.cid"] = userID
+	personaPacket["userInfo.[]"] = strconv.Itoa(1)
+
+	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, personaPacket, event.Command.PayloadID)
 }
