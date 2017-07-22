@@ -111,7 +111,7 @@ func (fM *FeslManager) setStatsStatement(statsAmount int) *sql.Stmt {
 		query += "(?, ?, ?), "
 	}
 
-	sql := "INSER INTO game_stats" +
+	sql := "INSERT INTO game_stats" +
 		"	(heroID, statsKey, statsValue)" +
 		"	VALUES " + query + "(?, ?, ?)" +
 		"	ON DUPLICATE KEY UPDATE" +

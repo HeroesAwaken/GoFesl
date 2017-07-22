@@ -1,10 +1,10 @@
 {
 	"TXN": "GetStats",
-	"keys.0": "c_items",
-	"keys.1": "c_wallet_hero",
-	"keys.2": "c_wallet_valor",
+	"keys.0": "c_ltm",
+	"keys.1": "c_slm",
+	"keys.2": "c_tut",
 	"keys.[]": "3",
-	"owner": "150",
+	"owner": "1",
 	"ownerType": "1",
 	"periodId": "0",
 	"periodPast": "0"
