@@ -19,35 +19,34 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 
 	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
 	for i := 0; i < users; i++ {
-		query := ""
 		owner, ok := event.Command.Message["u."+strconv.Itoa(i)+".o"]
 
 		if !ok {
 			return
 		}
 
-		statsNum, _ := strconv.Atoi(event.Command.Message["u."+strconv.Itoa(i)+".s.[]"])
-		for j := 0; j < statsNum; j++ {
-			if event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"] != "" {
-				query += event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"] + "='" + MysqlRealEscapeString(event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]) + "', "
-			} else {
-				// TODO: Needs to be fixed, v = change, so v = -1 means substract one
-				query += event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"] + "='" + MysqlRealEscapeString(event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]) + "', "
+		// Generate our argument list for the statement -> owner, key1, value1, owner, key2, value2, owner, ...
+		var args []interface{}
+		keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
+		for j := 0; j < keys; j++ {
+
+			key := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"]
+			value := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]
+
+			if value == "" {
+				value = event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]
 			}
+
+			// We need to append 3 values for each insert/update,
+			// owner, key and value
+			args = append(args, owner)
+			args = append(args, key)
+			args = append(args, value)
 		}
 
-		if owner != "0" && owner != event.Client.RedisState.Get("uID") {
-			sql := "UPDATE `awaken_heroes_stats` SET " + query + "pid=" + owner + " WHERE pid = " + owner + ""
-			_, err := fM.db.Exec(sql)
-			if err != nil {
-				log.Errorln(err)
-			}
-		} else {
-			sql := "UPDATE `awaken_heroes_accounts` SET " + query + "uid=" + owner + " WHERE uid = " + owner + ""
-			_, err := fM.db.Exec(sql)
-			if err != nil {
-				log.Errorln(err)
-			}
+		_, err := fM.setStatsStatement(keys).Exec(args...)
+		if err != nil {
+			log.Errorln("Failed setting stats for hero "+owner, err.Error())
 		}
 	}
 

@@ -37,6 +37,7 @@ type FeslManager struct {
 	stmtGetHeroesByUserID               *sql.Stmt
 	stmtGetHeroeByName                  *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
+	mapSetStatsVariableAmount           map[int]*sql.Stmt
 }
 
 // New creates and starts a new ClientManager
@@ -93,6 +94,32 @@ func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
 	}
 
 	return fM.mapGetStatsVariableAmount[statsAmount]
+}
+
+func (fM *FeslManager) setStatsStatement(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := fM.mapSetStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "(?, ?, ?), "
+	}
+
+	fM.mapSetStatsVariableAmount[statsAmount], err = fM.db.Prepare(
+		"INSER INTO game_stats" +
+			"	(heroID, key, value)" +
+			"	VALUES " + query + "(?, ?, ?)" +
+			"	ON DUPLICATE KEY UPDATE" +
+			"	value=VALUES(value)")
+	if err != nil {
+		log.Fatalln("Error preparing stmtSetStatsVariableAmount with "+strconv.Itoa(statsAmount)+" values.", err.Error())
+	}
+
+	return fM.mapSetStatsVariableAmount[statsAmount]
 }
 
 func (fM *FeslManager) prepareStatements() {
@@ -168,6 +195,11 @@ func (fM *FeslManager) closeStatements() {
 	// Close the dynamic lenght getStats statements
 	for index := range fM.mapGetStatsVariableAmount {
 		fM.mapGetStatsVariableAmount[index].Close()
+	}
+
+	// Close the dynamic lenght setStats statements
+	for index := range fM.mapSetStatsVariableAmount {
+		fM.mapSetStatsVariableAmount[index].Close()
 	}
 }
 
