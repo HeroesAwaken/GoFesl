@@ -53,6 +53,9 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.server = server
 	fM.iDB = iDB
 
+	fM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
+	fM.mapSetStatsVariableAmount = make(map[int]*sql.Stmt)
+
 	// Prepare database statements
 	fM.prepareStatements()
 
@@ -84,13 +87,14 @@ func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
 		query += "?, "
 	}
 
-	fM.mapGetStatsVariableAmount[statsAmount], err = fM.db.Prepare(
-		"SELECT heroID, key, value" +
-			"	FROM game_stats" +
-			"	WHERE heroID=?" +
-			"		AND key IN (" + query + "?)")
+	sql := "SELECT heroID, statsKey, statsValue" +
+		"	FROM game_stats" +
+		"	WHERE heroID=?" +
+		"		AND key IN (" + query + "?)"
+
+	fM.mapGetStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
 	if err != nil {
-		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+strconv.Itoa(statsAmount)+" values.", err.Error())
+		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+sql+".", err.Error())
 	}
 
 	return fM.mapGetStatsVariableAmount[statsAmount]
@@ -109,12 +113,13 @@ func (fM *FeslManager) setStatsStatement(statsAmount int) *sql.Stmt {
 		query += "(?, ?, ?), "
 	}
 
-	fM.mapSetStatsVariableAmount[statsAmount], err = fM.db.Prepare(
-		"INSER INTO game_stats" +
-			"	(heroID, key, value)" +
-			"	VALUES " + query + "(?, ?, ?)" +
-			"	ON DUPLICATE KEY UPDATE" +
-			"	value=VALUES(value)")
+	sql := "INSER INTO game_stats" +
+		"	(heroID, statsKey, statsValue)" +
+		"	VALUES " + query + "(?, ?, ?)" +
+		"	ON DUPLICATE KEY UPDATE" +
+		"	value=VALUES(value)"
+
+	fM.mapSetStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
 	if err != nil {
 		log.Fatalln("Error preparing stmtSetStatsVariableAmount with "+strconv.Itoa(statsAmount)+" values.", err.Error())
 	}
