@@ -15,35 +15,7 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 
 	if event.Client.RedisState.Get("clientType") == "server" {
 		// Server login
-
-		var id, userID, servername, secretKey, username string
-
-		err := fM.stmtGetServerBySecret.QueryRow(event.Command.Message["password"]).Scan(&id, &userID, &servername, &secretKey, &username)
-		if err != nil {
-			packet := lib.NewPacket().
-				AddField("TXN", "NuLogin").
-				AddField("localizedMessage", "\"The password the user specified is incorrect\"").
-				AddField("errorContainer.[]", "0").
-				AddField("errorCode", "122")
-			event.Client.WriteFESL(event.Command.Query, packet.Raw(), event.Command.PayloadID)
-			return
-		}
-
-		saveRedis := make(map[string]interface{})
-		saveRedis["uID"] = userID
-		saveRedis["username"] = username
-		saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
-		saveRedis["keyHash"] = event.Command.Message["password"]
-		event.Client.RedisState.SetM(saveRedis)
-
-		loginPacket := make(map[string]string)
-		loginPacket["TXN"] = "NuLogin"
-		loginPacket["profileId"] = userID
-		loginPacket["userId"] = userID
-		loginPacket["nuid"] = username
-		loginPacket["lkey"] = event.Command.Message["password"]
-		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
-		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+		fM.NuLoginServer(event)
 		return
 	}
 
@@ -85,6 +57,38 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 	loginPacket["userId"] = id
 	loginPacket["nuid"] = username
 	loginPacket["lkey"] = "dicks"
+	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
+	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
+}
+
+// NuLoginServer - login command for servers
+func (fM *FeslManager) NuLoginServer(event GameSpy.EventClientTLSCommand) {
+	var id, userID, servername, secretKey, username string
+
+	err := fM.stmtGetServerBySecret.QueryRow(event.Command.Message["password"]).Scan(&id, &userID, &servername, &secretKey, &username)
+	if err != nil {
+		packet := lib.NewPacket().
+			AddField("TXN", "NuLogin").
+			AddField("localizedMessage", "\"The password the user specified is incorrect\"").
+			AddField("errorContainer.[]", "0").
+			AddField("errorCode", "122")
+		event.Client.WriteFESL(event.Command.Query, packet.Raw(), event.Command.PayloadID)
+		return
+	}
+
+	saveRedis := make(map[string]interface{})
+	saveRedis["uID"] = userID
+	saveRedis["username"] = username
+	saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
+	saveRedis["keyHash"] = event.Command.Message["password"]
+	event.Client.RedisState.SetM(saveRedis)
+
+	loginPacket := make(map[string]string)
+	loginPacket["TXN"] = "NuLogin"
+	loginPacket["profileId"] = userID
+	loginPacket["userId"] = userID
+	loginPacket["nuid"] = username
+	loginPacket["lkey"] = event.Command.Message["password"]
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
