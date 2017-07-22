@@ -12,6 +12,8 @@ import (
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 
+	"strconv"
+
 	"github.com/go-redis/redis"
 )
 
@@ -31,6 +33,7 @@ type FeslManager struct {
 	stmtGetUserByGameToken              *sql.Stmt
 	stmtGetServerBySecret               *sql.Stmt
 	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
+	mapGetStatsVariableAmount           map[int]*sql.Stmt
 }
 
 // New creates and starts a new ClientManager
@@ -62,6 +65,31 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	}()
 
 	go fM.run()
+}
+
+func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := fM.mapGetStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "?, "
+	}
+
+	fM.mapGetStatsVariableAmount[statsAmount], err = fM.db.Prepare(
+		"SELECT heroID, key, value" +
+			"	FROM game_stats" +
+			"	WHERE heroID=?" +
+			"		AND key IN (" + query + "?)")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+strconv.Itoa(statsAmount)+" values.", err.Error())
+	}
+
+	return fM.mapGetStatsVariableAmount[statsAmount]
 }
 
 func (fM *FeslManager) prepareStatements() {
@@ -105,6 +133,11 @@ func (fM *FeslManager) closeStatements() {
 	fM.stmtGetUserByGameToken.Close()
 	fM.stmtGetServerBySecret.Close()
 	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
+
+	// Close the dynamic lenght getStats statements
+	for index := range fM.mapGetStatsVariableAmount {
+		fM.mapGetStatsVariableAmount[index].Close()
+	}
 }
 
 func (fM *FeslManager) userHasPermission(id string, slug string) bool {

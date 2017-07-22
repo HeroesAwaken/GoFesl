@@ -14,175 +14,40 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
-	loginPacket := make(map[string]string)
-	loginPacket["TXN"] = "GetStats"
-
 	owner := event.Command.Message["owner"]
-
 	log.Noteln(event.Command.Message["owner"])
 
-	// TODO
-	// Check for mysql injection
-	var query string
+	loginPacket := make(map[string]string)
+	loginPacket["TXN"] = "GetStats"
+	loginPacket["ownerId"] = owner
+	loginPacket["ownerType"] = "1"
+
+	// Generate our argument list for the statement -> heroID, key1, key2, key3, ...
+	var args []interface{}
+	args = append(args, owner)
 	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
 	for i := 0; i < keys; i++ {
-		query += event.Command.Message["keys."+strconv.Itoa(i)+""] + ", "
+		args = append(args, event.Command.Message["keys."+strconv.Itoa(i)+""])
 	}
 
-	// Result is your slice string.
-	rawResult := make([][]byte, keys+1)
-	result := make([]string, keys+1)
-
-	dest := make([]interface{}, keys+1) // A temporary interface{} slice
-	for i := range rawResult {
-		dest[i] = &rawResult[i] // Put pointers to each string in the interface slice
-	}
-
-	// Owner==0 is for accounts-stats.
-	// Otherwise hero-stats
-	if owner == "0" || owner == event.Client.RedisState.Get("uID") {
-		stmt, err := fM.db.Prepare("SELECT " + query + "uid FROM awaken_heroes_accounts WHERE uid = ?")
-		log.Debugln(stmt)
-		defer stmt.Close()
-		if err != nil {
-			log.Errorln(err)
-
-			// DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
-			// Creates a missing column
-
-			var columns []string
-			keys, _ = strconv.Atoi(event.Command.Message["keys.[]"])
-			for i := 0; i < keys; i++ {
-				columns = append(columns, event.Command.Message["keys."+strconv.Itoa(i)+""])
-			}
-
-			for _, column := range columns {
-				log.Debugln("Checking column " + column)
-				stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"awaken_heroes_accounts\" AND COLUMN_NAME = \"" + column + "\"")
-				defer stmt2.Close()
-				if err != nil {
-				}
-				var count int
-				err = stmt2.QueryRow().Scan(&count)
-				if err != nil {
-				}
-
-				if count == 0 {
-					log.Debugln("Creating column " + column)
-					// If we land here, the column doesn't exist, so create it
-
-					_, err := fM.db.Exec("ALTER TABLE `awaken_heroes_accounts` ADD COLUMN `" + column + "` TEXT NULL")
-					if err != nil {
-					}
-				}
-			}
-
-			//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
-			return
-		}
-
-		err = stmt.QueryRow(event.Client.RedisState.Get("uID")).Scan(dest...)
-		if err != nil {
-			log.Debugln(err)
-			return
-		}
-		if err != nil {
-			log.Errorln(err)
-			return
-		}
-
-		for i, raw := range rawResult {
-			if raw == nil {
-				result[i] = "\\N"
-			} else {
-				result[i] = string(raw)
-			}
-		}
-
-		loginPacket["ownerId"] = result[len(result)-1]
-		loginPacket["ownerType"] = "1"
-		loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
-		for i := 0; i < keys; i++ {
-			loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
-			loginPacket["stats."+strconv.Itoa(i)+".value"] = result[i]
-		}
-
-		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
-		fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
-
-		return
-	}
-
-	// DO the same as above but for hero-stats instead of hero-account
-
-	stmt, err := fM.db.Prepare("SELECT " + query + "pid FROM awaken_heroes_stats WHERE pid = ?")
-
-	defer stmt.Close()
+	rows, err := fM.getStatsStatement(keys).Query(args...)
 	if err != nil {
-		log.Errorln(err)
+		log.Errorln("Failed gettings stats for hero "+owner, err.Error())
+	}
 
-		// DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
-		// Creates a missing column
-
-		var columns []string
-		keys, _ = strconv.Atoi(event.Command.Message["keys.[]"])
-		for i := 0; i < keys; i++ {
-			columns = append(columns, event.Command.Message["keys."+strconv.Itoa(i)+""])
+	count := 0
+	for rows.Next() {
+		var heroID, key, value string
+		err := rows.Scan(&heroID, &key, &value)
+		if err != nil {
+			log.Errorln("Issue with database:", err.Error())
 		}
 
-		for _, column := range columns {
-			log.Debugln("Checking column " + column)
-			stmt2, err := fM.db.Prepare("SELECT count(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \"awaken_heroes_stats\" AND COLUMN_NAME = \"" + column + "\"")
-			defer stmt2.Close()
-			if err != nil {
-			}
-			var count int
-			err = stmt2.QueryRow().Scan(&count)
-			if err != nil {
-			}
-
-			if count == 0 {
-				log.Debugln("Creating column " + column)
-				// If we land here, the column doesn't exist, so create it
-
-				sql := "ALTER TABLE `awaken_heroes_stats` ADD COLUMN `" + column + "` TEXT NULL"
-				_, err := fM.db.Exec(sql)
-				if err != nil {
-					log.Errorln(sql)
-					log.Errorln(err)
-				}
-			}
-		}
-
-		//DEV CODE; REMOVE BEFORE TAKING LIVE!!!!!
-		//return
+		loginPacket["stats."+strconv.Itoa(count)+".key"] = key
+		loginPacket["stats."+strconv.Itoa(count)+".value"] = value
+		count++
 	}
-	log.Noteln(stmt)
-	err = stmt.QueryRow(owner).Scan(dest...)
-	if err != nil {
-		log.Debugln(err)
-		return
-	}
-	if err != nil {
-		log.Errorln(err)
-		return
-	}
-
-	for i, raw := range rawResult {
-		if raw == nil {
-			result[i] = "\\N"
-		} else {
-			result[i] = string(raw)
-		}
-	}
-
-	loginPacket["ownerId"] = result[len(result)-1]
-	loginPacket["ownerType"] = "1"
-	loginPacket["stats.[]"] = event.Command.Message["keys.[]"]
-	for i := 0; i < keys; i++ {
-		loginPacket["stats."+strconv.Itoa(i)+".key"] = event.Command.Message["keys."+strconv.Itoa(i)+""]
-		loginPacket["stats."+strconv.Itoa(i)+".value"] = result[i]
-	}
+	loginPacket["stats.[]"] = strconv.Itoa(count)
 
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
