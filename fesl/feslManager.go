@@ -12,8 +12,6 @@ import (
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 
-	"strconv"
-
 	"github.com/go-redis/redis"
 )
 
@@ -90,11 +88,11 @@ func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
 	sql := "SELECT heroID, statsKey, statsValue" +
 		"	FROM game_stats" +
 		"	WHERE heroID=?" +
-		"		AND key IN (" + query + "?)"
+		"		AND statsKey IN (" + query + "?)"
 
 	fM.mapGetStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
 	if err != nil {
-		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+sql+".", err.Error())
+		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+sql+" query.", err.Error())
 	}
 
 	return fM.mapGetStatsVariableAmount[statsAmount]
@@ -117,11 +115,11 @@ func (fM *FeslManager) setStatsStatement(statsAmount int) *sql.Stmt {
 		"	(heroID, statsKey, statsValue)" +
 		"	VALUES " + query + "(?, ?, ?)" +
 		"	ON DUPLICATE KEY UPDATE" +
-		"	value=VALUES(value)"
+		"	statsValue=VALUES(statsValue)"
 
 	fM.mapSetStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
 	if err != nil {
-		log.Fatalln("Error preparing stmtSetStatsVariableAmount with "+strconv.Itoa(statsAmount)+" values.", err.Error())
+		log.Fatalln("Error preparing stmtSetStatsVariableAmount with "+sql+" query.", err.Error())
 	}
 
 	return fM.mapSetStatsVariableAmount[statsAmount]
