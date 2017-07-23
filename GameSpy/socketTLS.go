@@ -6,6 +6,8 @@ import (
 	"net"
 	"strings"
 
+	"time"
+
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 
@@ -93,19 +95,8 @@ func (socket *SocketTLS) run() {
 	for {
 		// Listen for an incoming connection.
 		conn, err := socket.listen.Accept()
-		if err != nil {
-			log.Errorf("%s: A new client connecting threw an error.\n%v", socket.name, err)
-			socket.eventChan <- SocketEvent{
-				Name: "error",
-				Data: EventError{
-					Error: err,
-				},
-			}
-			continue
-		}
 
-		tlscon, ok := conn.(*tls.Conn)
-		if !ok {
+		if err != nil {
 			log.Errorf("%s: A new client connecting threw an error.\n%v", socket.name, err)
 			socket.eventChan <- SocketEvent{
 				Name: "error",
@@ -114,51 +105,68 @@ func (socket *SocketTLS) run() {
 				},
 			}
 			conn.Close()
-			continue
 		}
 
-		err = tlscon.Handshake()
-		if err != nil {
-			log.Errorf("%s: A new client connecting threw an error.\n%v", socket.name, err)
+		go func() {
+			tlscon, ok := conn.(*tls.Conn)
+			if !ok {
+				log.Errorf("%s: A new client connecting threw an error.\n%v", socket.name, err)
+				socket.eventChan <- SocketEvent{
+					Name: "error",
+					Data: EventError{
+						Error: err,
+					},
+				}
+				conn.Close()
+			}
+
+			tlscon.SetDeadline(time.Now().Add(time.Second * 10))
+
+			err = tlscon.Handshake()
+			if err != nil {
+				log.Errorf("%s: A new client connecting threw an error.\n%v\n%v", socket.name, err, tlscon.RemoteAddr())
+				socket.eventChan <- SocketEvent{
+					Name: "error",
+					Data: EventError{
+						Error: err,
+					},
+				}
+				tlscon.Close()
+			}
+
+			state := tlscon.ConnectionState()
+			log.Debugf("Connection handshake complete %v, %v", state.HandshakeComplete, state)
+
+			// reset deadline after handshake
+			tlscon.SetDeadline(time.Time{})
+
+			// Create a new Client and add it to our slice
+			newClient := new(ClientTLS)
+			newClient.FESL = true
+			clientEventSocket, err := newClient.New(socket.name, tlscon)
+			if err != nil {
+				log.Errorf("%s: Creating the new client threw an error.\n%v", socket.name, err)
+				socket.eventChan <- SocketEvent{
+					Name: "error",
+					Data: EventError{
+						Error: err,
+					},
+				}
+				tlscon.Close()
+			}
+			go socket.handleClientEvents(newClient, clientEventSocket)
+
+			log.Noteln(socket.name + ": A new client connected")
+			socket.ClientsTLS = append(socket.ClientsTLS, newClient)
+
+			// Fire newClient event
 			socket.eventChan <- SocketEvent{
-				Name: "error",
-				Data: EventError{
-					Error: err,
+				Name: "newClient",
+				Data: EventNewClientTLS{
+					Client: newClient,
 				},
 			}
-			tlscon.Close()
-			continue
-		}
-
-		state := tlscon.ConnectionState()
-		log.Debugf("Connection handshake complete %v, %v", state.HandshakeComplete, state)
-
-		// Create a new Client and add it to our slice
-		newClient := new(ClientTLS)
-		newClient.FESL = true
-		clientEventSocket, err := newClient.New(socket.name, tlscon)
-		if err != nil {
-			log.Errorf("%s: Creating the new client threw an error.\n%v", socket.name, err)
-			socket.eventChan <- SocketEvent{
-				Name: "error",
-				Data: EventError{
-					Error: err,
-				},
-			}
-			tlscon.Close()
-		}
-		go socket.handleClientEvents(newClient, clientEventSocket)
-
-		log.Noteln(socket.name + ": A new client connected")
-		socket.ClientsTLS = append(socket.ClientsTLS, newClient)
-
-		// Fire newClient event
-		socket.eventChan <- SocketEvent{
-			Name: "newClient",
-			Data: EventNewClientTLS{
-				Client: newClient,
-			},
-		}
+		}()
 	}
 }
 
