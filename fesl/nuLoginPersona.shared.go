@@ -1,8 +1,8 @@
 package fesl
 
 import (
-	"github.com/HeroesAwaken/GoFesl2/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 

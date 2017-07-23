@@ -2,8 +2,8 @@ package theater
 
 import (
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/HeroesAwaken/GoFesl2/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 
