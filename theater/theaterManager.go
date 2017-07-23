@@ -70,6 +70,7 @@ type TheaterManager struct {
 	iDB              *core.InfluxDB
 
 	// Database Statements
+	stmtGetHeroeByID          *sql.Stmt
 	mapGetStatsVariableAmount map[int]*sql.Stmt
 }
 
@@ -95,7 +96,9 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	}
 	tM.stopTicker = make(chan bool, 1)
 
+	// Prepare database statements
 	tM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
+	tM.prepareStatements()
 
 	// Collect metrics every 10 seconds
 	tM.batchTicker = time.NewTicker(time.Second * 1)
@@ -108,6 +111,18 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	//tM.redis.Set(COUNTER_GID_KEY, 0, 0)
 
 	go tM.run()
+}
+
+func (tM *TheaterManager) prepareStatements() {
+	var err error
+
+	tM.stmtGetHeroeByID, err = tM.db.Prepare(
+		"SELECT id, user_id, heroName, online" +
+			"	FROM game_heroes" +
+			"	WHERE id = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetHeroeByID.", err.Error())
+	}
 }
 
 func (tM *TheaterManager) getStatsStatement(statsAmount int) *sql.Stmt {

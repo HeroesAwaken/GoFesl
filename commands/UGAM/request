@@ -1,11 +1,9 @@
 {
-	"B-U-army_balance": "Balanced",
-	"B-U-army_distribution": "\"0,0,0,0,0,0,0,0,0,0,0\"",
-	"B-U-percent_full": "0",
-	"B-U-server_state": "empty",
-	"GID": "5459",
+	"B-U-percent_full": "6",
+	"B-U-server_state": "has_players",
+	"GID": "1",
 	"JOIN": "O",
 	"LID": "1",
-	"NAME": "[iad]gs1-test.revive.systems(192.168.69.7:18569)",
-	"TID": "17"
+	"NAME": "\"[iad]A Battlefield Heroes Server(192.168.0.5:18569)\"",
+	"TID": "7"
 }

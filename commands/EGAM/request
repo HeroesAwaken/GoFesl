@@ -1,17 +1,17 @@
 {
-	"GID": "5459",
+	"GID": "1",
 	"LID": "1",
-	"PORT": "18877",
+	"PORT": "60881",
 	"PTYPE": "P",
-	"R-INT-IP": "192.168.69.69",
-	"R-INT-PORT": "62867",
-	"R-U-accid": "158",
+	"R-INT-IP": "172.25.10.58",
+	"R-INT-PORT": "60881",
+	"R-U-accid": "2",
 	"R-U-category": "3",
 	"R-U-dataCenter": "iad",
-	"R-U-elo": "800",
-	"R-U-externalIp": "100.8.150.209",
-	"R-U-kit": "1",
-	"R-U-lvl": "10",
+	"R-U-elo": "1000",
+	"R-U-externalIp": "192.168.0.5",
+	"R-U-kit": "0",
+	"R-U-lvl": "1",
 	"R-U-team": "1",
-	"TID": "10"
+	"TID": "4"
 }

@@ -14,7 +14,7 @@ func (fM *FeslManager) NuLookupUserInfo(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
-	if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] == "gs1-test.revive.systems" {
+	if event.Client.RedisState.Get("clientType") == "server" || event.Command.Message["userInfo.0.userName"] == "gs1-test.revive.systems" {
 		fM.NuLookupUserInfoServer(event)
 		return
 	}
@@ -53,7 +53,7 @@ func (fM *FeslManager) NuLookupUserInfoServer(event GameSpy.EventClientTLSComman
 	var err error
 
 	var id, userID, servername, secretKey, username string
-	err = fM.stmtGetServerByID.QueryRow(event.Client.RedisState.Get("uID")).Scan(&id, &userID, &servername, &secretKey, &username)
+	err = fM.stmtGetServerByID.QueryRow(event.Client.RedisState.Get("sID")).Scan(&id, &userID, &servername, &secretKey, &username)
 	if err != nil {
 		log.Errorln(err)
 		return

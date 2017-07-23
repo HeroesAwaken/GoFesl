@@ -2,12 +2,11 @@
 	"TXN": "Status",
 	"id.id": "1",
 	"id.partition": "/eagames/bfwest-dedicated",
-	"props.{availableServerCount}": "1",
-	"props.{games}.1.fit": "1001",
-	"props.{games}.1.gid": "1",
-	"props.{games}.1.lid": "1",
+	"props.{games}.0.fit": "1001",
+	"props.{games}.0.gid": "1",
+	"props.{games}.0.lid": "1",
 	"props.{games}.[]": "1",
 	"props.{resultType}": "JOIN",
-	"props.{}": "2",
+	"props.{}.[]": "2",
 	"sessionState": "COMPLETE"
 }

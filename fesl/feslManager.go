@@ -31,6 +31,7 @@ type FeslManager struct {
 	stmtGetUserByGameToken              *sql.Stmt
 	stmtGetServerBySecret               *sql.Stmt
 	stmtGetServerByID                   *sql.Stmt
+	stmtGetServerByName                 *sql.Stmt
 	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
 	stmtGetHeroesByUserID               *sql.Stmt
 	stmtGetHeroeByName                  *sql.Stmt
@@ -157,6 +158,16 @@ func (fM *FeslManager) prepareStatements() {
 		log.Fatalln("Error preparing stmtGetServerByID.", err.Error())
 	}
 
+	fM.stmtGetServerByName, err = fM.db.Prepare(
+		"SELECT game_servers.id, users.id, game_servers.servername, game_servers.secretKey, users.username" +
+			"	FROM game_servers" +
+			"	LEFT JOIN users" +
+			"		ON users.id=game_servers.user_id" +
+			"	WHERE game_servers.servername = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetServerByName.", err.Error())
+	}
+
 	fM.stmtGetCountOfPermissionByIDAndSlug, err = fM.db.Prepare(
 		"SELECT count(permissions.slug)" +
 			"	FROM users" +
@@ -192,6 +203,8 @@ func (fM *FeslManager) prepareStatements() {
 func (fM *FeslManager) closeStatements() {
 	fM.stmtGetUserByGameToken.Close()
 	fM.stmtGetServerBySecret.Close()
+	fM.stmtGetServerByID.Close()
+	fM.stmtGetServerByName.Close()
 	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
 	fM.stmtGetHeroesByUserID.Close()
 	fM.stmtGetHeroeByName.Close()

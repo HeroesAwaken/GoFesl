@@ -1,8 +1,8 @@
 package fesl
 
 import (
+	"github.com/HeroesAwaken/GoFesl2/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 
@@ -50,14 +50,23 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 	saveRedis["username"] = username
 	saveRedis["sessionID"] = gameToken
 	saveRedis["email"] = email
+	saveRedis["keyHash"] = event.Command.Message["encryptedInfo"]
 	event.Client.RedisState.SetM(saveRedis)
+
+	// Setup a new key for our persona
+	lkey := GameSpy.BF2RandomUnsafe(24)
+	lkeyRedis := new(lib.RedisObject)
+	lkeyRedis.New(fM.redis, "lkeys", lkey)
+	lkeyRedis.Set("id", id)
+	lkeyRedis.Set("userID", id)
+	lkeyRedis.Set("name", username)
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLogin"
 	loginPacket["profileId"] = id
 	loginPacket["userId"] = id
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = "dicks"
+	loginPacket["lkey"] = lkey
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -68,28 +77,37 @@ func (fM *FeslManager) NuLoginServer(event GameSpy.EventClientTLSCommand) {
 
 	err := fM.stmtGetServerBySecret.QueryRow(event.Command.Message["password"]).Scan(&id, &userID, &servername, &secretKey, &username)
 	if err != nil {
-		packet := lib.NewPacket().
-			AddField("TXN", "NuLogin").
-			AddField("localizedMessage", "\"The password the user specified is incorrect\"").
-			AddField("errorContainer.[]", "0").
-			AddField("errorCode", "122")
-		event.Client.WriteFESL(event.Command.Query, packet.Raw(), event.Command.PayloadID)
+		loginPacket := make(map[string]string)
+		loginPacket["TXN"] = "NuLogin"
+		loginPacket["localizedMessage"] = "\"The password the user specified is incorrect\""
+		loginPacket["errorContainer.[]"] = "0"
+		loginPacket["errorCode"] = "122"
+		event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 		return
 	}
 
 	saveRedis := make(map[string]interface{})
 	saveRedis["uID"] = userID
+	saveRedis["sID"] = id
 	saveRedis["username"] = username
 	saveRedis["apikey"] = event.Command.Message["encryptedInfo"]
 	saveRedis["keyHash"] = event.Command.Message["password"]
 	event.Client.RedisState.SetM(saveRedis)
+
+	// Setup a new key for our persona
+	lkey := GameSpy.BF2RandomUnsafe(24)
+	lkeyRedis := new(lib.RedisObject)
+	lkeyRedis.New(fM.redis, "lkeys", lkey)
+	lkeyRedis.Set("id", id)
+	lkeyRedis.Set("userID", userID)
+	lkeyRedis.Set("name", username)
 
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLogin"
 	loginPacket["profileId"] = userID
 	loginPacket["userId"] = userID
 	loginPacket["nuid"] = username
-	loginPacket["lkey"] = event.Command.Message["password"]
+	loginPacket["lkey"] = lkey
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }

@@ -1,8 +1,18 @@
 {
 	"TXN": "GetStats",
-	"ownerId": "1",
+	"ownerId": "4",
 	"ownerType": "1",
-	"stats.0.key": "c_ltp",
-	"stats.0.value": "8950.0000",
-	"stats.[]": "1"
+	"stats.0.key": "c_emo",
+	"stats.0.text": "5000;5007;5016;0;0;0;0;0;0",
+	"stats.0.value": "5000;5007;5016;0;0;0;0;0;0",
+	"stats.1.key": "c_eqp",
+	"stats.1.text": "3055;3014;2141;3155;0;0;0;0;0;0",
+	"stats.1.value": "3055;3014;2141;3155;0;0;0;0;0;0",
+	"stats.2.key": "c_wmid0",
+	"stats.2.text": "6000.0000",
+	"stats.2.value": "6000.0000",
+	"stats.3.key": "c_ltp",
+	"stats.3.text": "8951.0000",
+	"stats.3.value": "8951.0000",
+	"stats.[]": "4"
 }

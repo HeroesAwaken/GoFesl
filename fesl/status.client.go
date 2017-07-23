@@ -13,6 +13,12 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
+	// Check if user is allowed to matchmake
+	if !fM.userHasPermission(event.Client.RedisState.Get("uID"), "game.matchmake") {
+		log.Noteln("User not worthy: " + event.Client.RedisState.Get("username"))
+		return
+	}
+
 	log.Noteln("STATUS CALLED")
 
 	answer := make(map[string]string)

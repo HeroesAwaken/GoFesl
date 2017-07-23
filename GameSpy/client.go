@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
 
@@ -22,6 +23,7 @@ type Client struct {
 	eventChan  chan ClientEvent
 	IsActive   bool
 	reader     *bufio.Reader
+	RedisState *core.RedisState
 	IpAddr     net.Addr
 	State      ClientState
 	FESL       bool
@@ -241,7 +243,9 @@ func (client *Client) handleRequest() {
 		}
 
 		if client.FESL {
-			go client.readFESL(buf[:n])
+			client.readFESL(buf[:n])
+
+			buf = make([]byte, 2048)
 			continue
 		}
 

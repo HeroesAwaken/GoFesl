@@ -47,6 +47,7 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 
 		loginPacket["stats."+strconv.Itoa(count)+".key"] = statsKey
 		loginPacket["stats."+strconv.Itoa(count)+".value"] = statsValue
+		loginPacket["stats."+strconv.Itoa(count)+".text"] = statsValue
 		count++
 	}
 	loginPacket["stats.[]"] = strconv.Itoa(count)
