@@ -68,6 +68,9 @@ type TheaterManager struct {
 	stopTicker       chan bool
 	cacheCounters    *lib.RedisObject
 	iDB              *core.InfluxDB
+
+	// Database Statements
+	mapGetStatsVariableAmount map[int]*sql.Stmt
 }
 
 const COUNTER_GID_KEY = "counters:GID"
@@ -92,6 +95,8 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	}
 	tM.stopTicker = make(chan bool, 1)
 
+	tM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
+
 	// Collect metrics every 10 seconds
 	tM.batchTicker = time.NewTicker(time.Second * 1)
 	go func() {
@@ -103,6 +108,42 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	//tM.redis.Set(COUNTER_GID_KEY, 0, 0)
 
 	go tM.run()
+}
+
+func (tM *TheaterManager) getStatsStatement(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := tM.mapGetStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "?, "
+	}
+
+	sql := "SELECT game_heroes.user_id, game_heroes.id, game_heroes.heroName, game_stats.statsKey, game_stats.statsValue" +
+		"	FROM game_heroes" +
+		"	LEFT JOIN game_stats" +
+		"		ON game_stats.user_id = game_heroes.user_id" +
+		"		AND game_stats.heroID = game_heroes.id" +
+		"	WHERE game_heroes.id=?" +
+		"		AND game_stats.statsKey IN (" + query + "?)"
+
+	tM.mapGetStatsVariableAmount[statsAmount], err = tM.db.Prepare(sql)
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetStatsVariableAmount with "+sql+" query.", err.Error())
+	}
+
+	return tM.mapGetStatsVariableAmount[statsAmount]
+}
+
+func (tM *TheaterManager) closeStatements() {
+	// Close the dynamic lenght getStats statements
+	for index := range tM.mapGetStatsVariableAmount {
+		tM.mapGetStatsVariableAmount[index].Close()
+	}
 }
 
 func (tM *TheaterManager) collectMetrics() {
@@ -166,6 +207,9 @@ func (tM *TheaterManager) run() {
 			}
 		}
 	}
+
+	// Close all database statements
+	tM.closeStatements()
 }
 
 // LogCommandUDP log data to a debug file for further analysis

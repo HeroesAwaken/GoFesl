@@ -28,26 +28,25 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 	event.Client.WriteFESL("EGAM", clientAnswer, 0x0)
 	tM.logAnswer("EGAM", clientAnswer, 0x0)
 
-	// Get client data
-	stmt, err := tM.db.Prepare("SELECT uid, nickname FROM heroes_soldiers WHERE pid = ?")
-	defer stmt.Close()
+	// Get 4 stats for PID
+	rows, err := tM.getStatsStatement(4).Query(pid, "c_kit", "c_team", "elo", "level")
 	if err != nil {
-		log.Errorln(err)
-		return
+		log.Errorln("Failed gettings stats for hero "+pid, err.Error())
 	}
-	var nickname string
-	var uid int
-	stmt.QueryRow(pid).Scan(&uid, &nickname)
 
-	// Get statas data
-	statsStmt, err := tM.db.Prepare("SELECT c_kit, c_team, elo, level FROM awaken_heroes_stats WHERE pid = ?")
-	defer stmt.Close()
-	if err != nil {
-		log.Errorln(err)
-		return
+	stats := make(map[string]string)
+
+	for rows.Next() {
+		var userID, heroID, heroName, statsKey, statsValue string
+		err := rows.Scan(&userID, &heroID, &heroName, &statsKey, &statsValue)
+		if err != nil {
+			log.Errorln("Issue with database:", err.Error())
+		}
+
+		stats["heroName"] = heroName
+		stats["userID"] = userID
+		stats[statsKey] = statsValue
 	}
-	var pKit, pTeam, pElo, pLevel string
-	statsStmt.QueryRow(pid).Scan(&pKit, &pTeam, &pElo, &pLevel)
 
 	// todo: get game data and check if full
 
@@ -60,8 +59,8 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ := make(map[string]string)
 		serverEGRQ["TID"] = "0"
 
-		serverEGRQ["NAME"] = nickname
-		serverEGRQ["UID"] = strconv.Itoa(uid)
+		serverEGRQ["NAME"] = stats["heroName"]
+		serverEGRQ["UID"] = stats["userID"]
 		serverEGRQ["PID"] = pid
 		serverEGRQ["TICKET"] = "2018751182"
 
@@ -73,13 +72,13 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 
 		serverEGRQ["PTYPE"] = "P"
 		// maybe do CID here?
-		serverEGRQ["R-USER"] = nickname
-		serverEGRQ["R-UID"] = strconv.Itoa(uid)
-		serverEGRQ["R-U-accid"] = strconv.Itoa(uid)
-		serverEGRQ["R-U-elo"] = pElo
-		serverEGRQ["R-U-team"] = pTeam
-		serverEGRQ["R-U-kit"] = pKit
-		serverEGRQ["R-U-lvl"] = pLevel
+		serverEGRQ["R-USER"] = stats["heroName"]
+		serverEGRQ["R-UID"] = stats["userID"]
+		serverEGRQ["R-U-accid"] = pid
+		serverEGRQ["R-U-elo"] = stats["elo"]
+		serverEGRQ["R-U-team"] = stats["c_team"]
+		serverEGRQ["R-U-kit"] = stats["c_kit"]
+		serverEGRQ["R-U-lvl"] = stats["level"]
 		serverEGRQ["R-U-dataCenter"] = "iad"
 		serverEGRQ["R-U-externalIp"] = externalIP
 		serverEGRQ["R-U-internalIp"] = event.Command.Message["R-INT-IP"]
