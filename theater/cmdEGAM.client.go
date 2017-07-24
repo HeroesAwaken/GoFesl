@@ -13,7 +13,7 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		log.Noteln("Client left")
 		return
 	}
-	//externalIP := event.Client.IpAddr.(*net.TCPAddr).IP.String()
+	externalIP := event.Client.IpAddr.(*net.TCPAddr).IP.String()
 	lobbyID := event.Command.Message["LID"]
 	gameID := event.Command.Message["GID"]
 	pid := event.Client.RedisState.Get("id")
@@ -63,10 +63,10 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["TICKET"] = "2018751182"
 		serverEGRQ["cid"] = pid
 
-		serverEGRQ["IP"] = event.Command.Message["R-U-externalIp"]
-		//serverEGRQ["IP"] = externalIP
-		//serverEGRQ["PORT"] = strconv.Itoa(event.Client.IpAddr.(*net.TCPAddr).Port)
-		serverEGRQ["PORT"] = event.Command.Message["PORT"]
+		//serverEGRQ["IP"] = event.Command.Message["R-U-externalIp"]
+		serverEGRQ["IP"] = externalIP
+		serverEGRQ["PORT"] = strconv.Itoa(event.Client.IpAddr.(*net.TCPAddr).Port)
+		//serverEGRQ["PORT"] = event.Command.Message["PORT"]
 
 		serverEGRQ["INT-IP"] = event.Command.Message["R-INT-IP"]
 		serverEGRQ["INT-PORT"] = event.Command.Message["R-INT-PORT"]
@@ -81,8 +81,8 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["R-U-kit"] = stats["c_kit"]
 		serverEGRQ["R-U-lvl"] = stats["level"]
 		serverEGRQ["R-U-dataCenter"] = "iad"
-		serverEGRQ["R-U-externalIp"] = event.Command.Message["R-U-externalIp"]
-		//serverEGRQ["R-U-externalIp"] = externalIP
+		//serverEGRQ["R-U-externalIp"] = event.Command.Message["R-U-externalIp"]
+		serverEGRQ["R-U-externalIp"] = externalIP
 		serverEGRQ["R-U-internalIp"] = event.Command.Message["R-INT-IP"]
 		serverEGRQ["R-U-category"] = event.Command.Message["R-U-category"]
 		serverEGRQ["R-U-cid"] = pid
