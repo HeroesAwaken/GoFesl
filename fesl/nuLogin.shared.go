@@ -23,7 +23,7 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 
 	err := fM.stmtGetUserByGameToken.QueryRow(event.Command.Message["encryptedInfo"]).Scan(&id, &username, &email, &birthday, &language, &country, &gameToken)
 	if err != nil {
-		log.Noteln("User not worthy!")
+		log.Noteln("User not worthy!", err)
 		loginPacket := make(map[string]string)
 		loginPacket["TXN"] = "NuLogin"
 		loginPacket["localizedMessage"] = "\"The user is not entitled to access this game\""
