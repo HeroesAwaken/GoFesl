@@ -115,10 +115,10 @@ func main() {
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {
-		log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
+		log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
 	}()
 	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
+		log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
 	}()
 	// Startup done
 
