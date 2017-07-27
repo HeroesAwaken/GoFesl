@@ -28,6 +28,18 @@ func (fM *FeslManager) GetStatsForOwners(event GameSpy.EventClientTLSCommand) {
 	i := 1
 	for i = 1; i <= numOfHeroesInt; i++ {
 		ownerID := event.Client.RedisState.Get("ownerId." + strconv.Itoa(i))
+		if event.Client.RedisState.Get("clientType") == "server" {
+
+			var id, userIDhero, heroName, online string
+			err := fM.stmtGetHeroeByID.QueryRow(ownerID).Scan(&id, &userIDhero, &heroName, &online)
+			if err != nil {
+				log.Noteln("Persona not worthy!")
+				return
+			}
+
+			userID = userIDhero
+			log.Noteln("Server requesting stats")
+		}
 
 		loginPacket["stats."+strconv.Itoa(i-1)+".ownerId"] = ownerID
 		loginPacket["stats."+strconv.Itoa(i-1)+".ownerType"] = "1"
@@ -67,7 +79,7 @@ func (fM *FeslManager) GetStatsForOwners(event GameSpy.EventClientTLSCommand) {
 		// Send stats not found with default value of ""
 		for key := range statsKeys {
 			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".key"] = key
-			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".value"] = "0"
+			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".value"] = ""
 			loginPacket["stats."+strconv.Itoa(i-1)+".stats."+strconv.Itoa(count)+".text"] = ""
 
 			count++

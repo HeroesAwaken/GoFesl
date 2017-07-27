@@ -22,6 +22,18 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
 	for i := 0; i < users; i++ {
 		owner, ok := event.Command.Message["u."+strconv.Itoa(i)+".o"]
+		if event.Client.RedisState.Get("clientType") == "server" {
+
+			var id, userIDhero, heroName, online string
+			err := fM.stmtGetHeroeByID.QueryRow(owner).Scan(&id, &userIDhero, &heroName, &online)
+			if err != nil {
+				log.Noteln("Persona not worthy!")
+				return
+			}
+
+			userId = userIDhero
+			log.Noteln("Server requesting stats")
+		}
 
 		if !ok {
 			return

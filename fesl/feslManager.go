@@ -35,6 +35,7 @@ type FeslManager struct {
 	stmtGetCountOfPermissionByIDAndSlug *sql.Stmt
 	stmtGetHeroesByUserID               *sql.Stmt
 	stmtGetHeroeByName                  *sql.Stmt
+	stmtGetHeroeByID                    *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
 	mapSetStatsVariableAmount           map[int]*sql.Stmt
 }
@@ -197,6 +198,14 @@ func (fM *FeslManager) prepareStatements() {
 			"	WHERE heroName = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtGetHeroesByUserID.", err.Error())
+	}
+
+	fM.stmtGetHeroeByID, err = fM.db.Prepare(
+		"SELECT id, user_id, heroName, online" +
+			"	FROM game_heroes" +
+			"	WHERE id = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGetHeroeByID.", err.Error())
 	}
 }
 

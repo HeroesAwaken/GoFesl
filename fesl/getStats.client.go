@@ -16,6 +16,22 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 
 	owner := event.Command.Message["owner"]
 	userId := event.Client.RedisState.Get("uID")
+
+	if event.Client.RedisState.Get("clientType") == "server" {
+
+		var id, userID, heroName, online string
+		err := fM.stmtGetHeroeByID.QueryRow(owner).Scan(&id, &userID, &heroName, &online)
+		if err != nil {
+			log.Noteln("Persona not worthy!")
+			return
+		}
+
+		userId = userID
+		log.Noteln("Server requesting stats")
+	}
+
+	log.Noteln("GetStats", owner, userId)
+
 	log.Noteln(event.Command.Message["owner"])
 
 	loginPacket := make(map[string]string)
@@ -58,7 +74,7 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 	// Send stats not found with default value of ""
 	for key := range statsKeys {
 		loginPacket["stats."+strconv.Itoa(count)+".key"] = key
-		loginPacket["stats."+strconv.Itoa(count)+".value"] = "0"
+		loginPacket["stats."+strconv.Itoa(count)+".value"] = ""
 		loginPacket["stats."+strconv.Itoa(count)+".text"] = ""
 
 		count++
