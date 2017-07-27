@@ -25,11 +25,13 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 
 	// Generate our argument list for the statement -> heroID, userID, key1, key2, key3, ...
 	var args []interface{}
+	statsKeys := make(map[string]string)
 	args = append(args, owner)
 	args = append(args, userId)
 	keys, _ := strconv.Atoi(event.Command.Message["keys.[]"])
 	for i := 0; i < keys; i++ {
 		args = append(args, event.Command.Message["keys."+strconv.Itoa(i)+""])
+		statsKeys[event.Command.Message["keys."+strconv.Itoa(i)+""]] = strconv.Itoa(i)
 	}
 
 	rows, err := fM.getStatsStatement(keys).Query(args...)
@@ -48,6 +50,17 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 		loginPacket["stats."+strconv.Itoa(count)+".key"] = statsKey
 		loginPacket["stats."+strconv.Itoa(count)+".value"] = statsValue
 		loginPacket["stats."+strconv.Itoa(count)+".text"] = statsValue
+
+		delete(statsKeys, statsKey)
+		count++
+	}
+
+	// Send stats not found with default value of 0
+	for key := range statsKeys {
+		loginPacket["stats."+strconv.Itoa(count)+".key"] = key
+		loginPacket["stats."+strconv.Itoa(count)+".value"] = "0"
+		loginPacket["stats."+strconv.Itoa(count)+".text"] = "0"
+
 		count++
 	}
 	loginPacket["stats.[]"] = strconv.Itoa(count)

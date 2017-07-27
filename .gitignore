@@ -9,4 +9,4 @@ config.yml
 commands
 HeroesLogin
 *.pem
-/commands/
+commands/
