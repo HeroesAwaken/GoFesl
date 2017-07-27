@@ -14,7 +14,7 @@ func (fM *FeslManager) NuLookupUserInfo(event GameSpy.EventClientTLSCommand) {
 		return
 	}
 
-	if event.Client.RedisState.Get("clientType") == "server" || event.Command.Message["userInfo.0.userName"] == "gs1-test.revive.systems" {
+	if event.Client.RedisState.Get("clientType") == "server" && event.Command.Message["userInfo.0.userName"] == "Test-Server" {
 		fM.NuLookupUserInfoServer(event)
 		return
 	}
@@ -36,9 +36,9 @@ func (fM *FeslManager) NuLookupUserInfo(event GameSpy.EventClientTLSCommand) {
 
 		personaPacket["userInfo."+strconv.Itoa(i)+".userName"] = heroName
 		personaPacket["userInfo."+strconv.Itoa(i)+".userId"] = id
-		personaPacket["userInfo."+strconv.Itoa(i)+".masterUserId"] = userID
+		personaPacket["userInfo."+strconv.Itoa(i)+".masterUserId"] = id
 		personaPacket["userInfo."+strconv.Itoa(i)+".namespace"] = "MAIN"
-		personaPacket["userInfo."+strconv.Itoa(i)+".xuid"] = userID
+		personaPacket["userInfo."+strconv.Itoa(i)+".xuid"] = "24"
 	}
 
 	personaPacket["userInfo.[]"] = strconv.Itoa(keys)
@@ -62,11 +62,11 @@ func (fM *FeslManager) NuLookupUserInfoServer(event GameSpy.EventClientTLSComman
 	personaPacket := make(map[string]string)
 	personaPacket["TXN"] = "NuLookupUserInfo"
 	personaPacket["userInfo.0.userName"] = servername
-	personaPacket["userInfo.0.userId"] = id
-	personaPacket["userInfo.0.masterUserId"] = userID
+	personaPacket["userInfo.0.userId"] = "1"
+	personaPacket["userInfo.0.masterUserId"] = "1"
 	personaPacket["userInfo.0.namespace"] = "MAIN"
-	personaPacket["userInfo.0.xuid"] = userID
-	personaPacket["userInfo.0.cid"] = userID
+	personaPacket["userInfo.0.xuid"] = "24"
+	personaPacket["userInfo.0.cid"] = "1"
 	personaPacket["userInfo.[]"] = strconv.Itoa(1)
 
 	event.Client.WriteFESL(event.Command.Query, personaPacket, event.Command.PayloadID)

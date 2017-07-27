@@ -60,7 +60,7 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["TID"] = "0"
 
 		serverEGRQ["NAME"] = stats["heroName"]
-		serverEGRQ["UID"] = event.Command.Message["R-U-accid"]
+		serverEGRQ["UID"] = stats["userID"]
 		//serverEGRQ["PID"] = event.Command.Message["R-U-accid"]
 		serverEGRQ["PID"] = pid
 		serverEGRQ["TICKET"] = "2018751182"
@@ -76,8 +76,8 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["PTYPE"] = "P"
 		// maybe do CID here?
 		serverEGRQ["R-USER"] = stats["heroName"]
-		serverEGRQ["R-UID"] = event.Command.Message["R-U-accid"]
-		serverEGRQ["R-U-accid"] = event.Command.Message["R-U-accid"]
+		serverEGRQ["R-UID"] = stats["userID"]
+		serverEGRQ["R-U-accid"] = stats["userID"]
 		serverEGRQ["R-U-elo"] = stats["elo"]
 		serverEGRQ["R-U-team"] = stats["c_team"]
 		serverEGRQ["R-U-kit"] = stats["c_kit"]
@@ -87,12 +87,11 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["R-U-externalIp"] = externalIP
 		serverEGRQ["R-U-internalIp"] = event.Command.Message["R-INT-IP"]
 		serverEGRQ["R-U-category"] = event.Command.Message["R-U-category"]
-		serverEGRQ["R-U-cid"] = pid
 		serverEGRQ["R-INT-IP"] = event.Command.Message["R-INT-IP"]
 		serverEGRQ["R-INT-PORT"] = event.Command.Message["R-INT-PORT"]
 
 		serverEGRQ["XUID"] = "24"
-		serverEGRQ["R-XUID"] = event.Command.Message["R-U-accid"]
+		serverEGRQ["R-XUID"] = "24"
 
 		serverEGRQ["LID"] = lobbyID
 		serverEGRQ["GID"] = gameID

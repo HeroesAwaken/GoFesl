@@ -41,6 +41,7 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 
 			// We need to append 3 values for each insert/update,
 			// owner, key and value
+			log.Noteln("Updating stats:", userId, owner, key, value)
 			args = append(args, userId)
 			args = append(args, owner)
 			args = append(args, key)

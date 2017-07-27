@@ -55,11 +55,11 @@ func (fM *FeslManager) GetStats(event GameSpy.EventClientTLSCommand) {
 		count++
 	}
 
-	// Send stats not found with default value of 0
+	// Send stats not found with default value of ""
 	for key := range statsKeys {
 		loginPacket["stats."+strconv.Itoa(count)+".key"] = key
 		loginPacket["stats."+strconv.Itoa(count)+".value"] = "0"
-		loginPacket["stats."+strconv.Itoa(count)+".text"] = "0"
+		loginPacket["stats."+strconv.Itoa(count)+".text"] = ""
 
 		count++
 	}
