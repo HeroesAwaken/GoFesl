@@ -37,8 +37,8 @@ func (fM *FeslManager) NuLoginPersona(event GameSpy.EventClientTLSCommand) {
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLoginPersona"
 	loginPacket["lkey"] = lkey
-	loginPacket["profileId"] = id
-	loginPacket["userId"] = id
+	loginPacket["profileId"] = userID
+	loginPacket["userId"] = userID
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -56,7 +56,7 @@ func (fM *FeslManager) NuLoginPersonaServer(event GameSpy.EventClientTLSCommand)
 	lkey := GameSpy.BF2RandomUnsafe(24)
 	lkeyRedis := new(lib.RedisObject)
 	lkeyRedis.New(fM.redis, "lkeys", lkey)
-	lkeyRedis.Set("id", id)
+	lkeyRedis.Set("id", userID)
 	lkeyRedis.Set("userID", userID)
 	lkeyRedis.Set("name", servername)
 

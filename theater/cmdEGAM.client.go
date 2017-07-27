@@ -1,6 +1,9 @@
 package theater
 
 import (
+	"net"
+	"strconv"
+
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -54,14 +57,13 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		//gameServer := matchmaking.Games[gameID]
 
 		serverEGRQ := make(map[string]string)
-		serverEGRQ["TID"] = event.Command.Message["TID"]
+		serverEGRQ["TID"] = "0"
 
 		serverEGRQ["NAME"] = stats["heroName"]
 		serverEGRQ["UID"] = event.Command.Message["R-U-accid"]
 		//serverEGRQ["PID"] = event.Command.Message["R-U-accid"]
 		serverEGRQ["PID"] = pid
 		serverEGRQ["TICKET"] = "2018751182"
-		serverEGRQ["cid"] = pid
 
 		//serverEGRQ["IP"] = event.Command.Message["R-U-externalIp"]
 		serverEGRQ["IP"] = externalIP
@@ -89,9 +91,8 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		serverEGRQ["R-INT-IP"] = event.Command.Message["R-INT-IP"]
 		serverEGRQ["R-INT-PORT"] = event.Command.Message["R-INT-PORT"]
 
-		serverEGRQ["XUID"] = event.Command.Message["R-U-accid"]
+		serverEGRQ["XUID"] = "24"
 		serverEGRQ["R-XUID"] = event.Command.Message["R-U-accid"]
-		serverEGRQ["R-cid"] = pid
 
 		serverEGRQ["LID"] = lobbyID
 		serverEGRQ["GID"] = gameID
@@ -105,7 +106,7 @@ func (tM *TheaterManager) EGAM(event GameSpy.EventClientFESLCommand) {
 		clientEGEG["TICKET"] = "2018751182"
 
 		// That is the ServerID, was/is a test
-		clientEGEG["PID"] = "3"
+		clientEGEG["PID"] = pid
 		clientEGEG["I"] = gsData.Get("IP")
 		clientEGEG["P"] = gsData.Get("PORT")
 		clientEGEG["HUID"] = "1" // find via GID soon
