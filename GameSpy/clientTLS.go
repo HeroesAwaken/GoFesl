@@ -184,6 +184,7 @@ func (clientTLS *ClientTLS) handleRequest() {
 
 		}
 		clientTLS.readFESL(buf[:n])
+		buf = make([]byte, 4096) // buffer
 	}
 
 }
