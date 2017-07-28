@@ -247,7 +247,7 @@ func (fM *FeslManager) userHasPermission(id string, slug string) bool {
 
 func (fM *FeslManager) collectMetrics() {
 	// Create a point and add to batch
-	tags := map[string]string{"clients": "clients-total", "server": "feslManager"}
+	tags := map[string]string{"clients": "clients-total", "server": "feslManager" + fM.name}
 	fields := map[string]interface{}{
 		"clients": len(fM.socket.ClientsTLS),
 	}

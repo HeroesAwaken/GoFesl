@@ -163,7 +163,7 @@ func (tM *TheaterManager) closeStatements() {
 
 func (tM *TheaterManager) collectMetrics() {
 	// Create a point and add to batch
-	tags := map[string]string{"clients": "clients-total", "server": "theaterManager"}
+	tags := map[string]string{"clients": "clients-total", "server": "theaterManager-" + tM.name}
 	fields := map[string]interface{}{
 		"clients": len(tM.socket.Clients),
 	}
