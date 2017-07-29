@@ -14,15 +14,22 @@ func (tM *TheaterManager) UGAM(event GameSpy.EventClientFESLCommand) {
 		return
 	}
 
+	gameID := event.Command.Message["GID"]
+
 	gdata := new(lib.RedisObject)
-	gdata.New(tM.redis, "gdata", event.Command.Message["GID"])
+	gdata.New(tM.redis, "gdata", gameID)
 
-	log.Noteln("Updating GameServer " + event.Command.Message["GID"])
+	log.Noteln("Updating GameServer " + gameID)
 
+	var args []interface{}
+
+	keys := 0
 	for index, value := range event.Command.Message {
 		if index == "TID" {
 			continue
 		}
+
+		keys++
 
 		// Strip quotes
 		if len(value) > 0 && value[0] == '"' {
@@ -33,5 +40,14 @@ func (tM *TheaterManager) UGAM(event GameSpy.EventClientFESLCommand) {
 		}
 
 		gdata.Set(index, value)
+		args = append(args, gameID)
+		args = append(args, index)
+		args = append(args, value)
+	}
+
+	var err error
+	_, err = tM.setServerStatsStatement(keys).Exec(args...)
+	if err != nil {
+		log.Errorln("Failed to update stats for game server "+gameID, err.Error())
 	}
 }

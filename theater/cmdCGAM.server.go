@@ -30,15 +30,22 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 	// Store our server for easy access later
 	matchmaking.Games[gameID] = event.Client
 
+	var args []interface{}
+
 	// Setup a new key for our game
 	gameServer := new(lib.RedisObject)
 	gameServer.New(tM.redis, "gdata", gameID)
+
+	keys := 0
 
 	// Stores what we know about this game in the redis db
 	for index, value := range event.Command.Message {
 		if index == "TID" {
 			continue
 		}
+
+		keys++
+
 		// Strip quotes
 		if len(value) > 0 && value[0] == '"' {
 			value = value[1:]
@@ -47,6 +54,10 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 			value = value[:len(value)-1]
 		}
 		gameServer.Set(index, value)
+
+		args = append(args, gameID)
+		args = append(args, index)
+		args = append(args, value)
 	}
 
 	gameServer.Set("LID", "1")
@@ -54,6 +65,12 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 	gameServer.Set("IP", addr.IP.String())
 	gameServer.Set("ACTIVE-PLAYERS", "0")
 	gameServer.Set("QUEUE-LENGTH", "0")
+
+	var err error
+	_, err = tM.setServerStatsStatement(keys).Exec(args...)
+	if err != nil {
+		log.Errorln("Failed setting stats for game server "+gameID, err.Error())
+	}
 
 	answer := make(map[string]string)
 	answer["TID"] = event.Command.Message["TID"]

@@ -70,8 +70,10 @@ type TheaterManager struct {
 	iDB              *core.InfluxDB
 
 	// Database Statements
-	stmtGetHeroeByID          *sql.Stmt
-	mapGetStatsVariableAmount map[int]*sql.Stmt
+	stmtGetHeroeByID                      *sql.Stmt
+	mapGetStatsVariableAmount             map[int]*sql.Stmt
+	mapSetServerStatsVariableAmount       map[int]*sql.Stmt
+	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
 }
 
 const COUNTER_GID_KEY = "counters:GID"
@@ -98,6 +100,8 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 
 	// Prepare database statements
 	tM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
+	tM.mapSetServerStatsVariableAmount = make(map[int]*sql.Stmt)
+	tM.mapSetServerPlayerStatsVariableAmount = make(map[int]*sql.Stmt)
 	tM.prepareStatements()
 
 	// Collect metrics every 10 seconds
@@ -152,6 +156,62 @@ func (tM *TheaterManager) getStatsStatement(statsAmount int) *sql.Stmt {
 	}
 
 	return tM.mapGetStatsVariableAmount[statsAmount]
+}
+
+func (tM *TheaterManager) setServerStatsStatement(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := tM.mapSetServerStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "(?, ?, ?, NOW()), "
+	}
+
+	sql := "INSERT INTO game_server_stats" +
+		"	(gid, statsKey, statsValue, created_at)" +
+		"	VALUES " + query + "(?, ?, ?, NOW())" +
+		"	ON DUPLICATE KEY UPDATE" +
+		"	statsValue=VALUES(statsValue)," +
+		"   updated_at=NOW()"
+
+	tM.mapSetServerStatsVariableAmount[statsAmount], err = tM.db.Prepare(sql)
+	if err != nil {
+		log.Fatalln("Error preparing setServerStatsStatement with "+sql+" query.", err.Error())
+	}
+
+	return tM.mapSetServerStatsVariableAmount[statsAmount]
+}
+
+func (tM *TheaterManager) setServerPlayerStatsStatement(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := tM.mapSetServerPlayerStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "(?, ?, ?, ?, NOW()), "
+	}
+
+	sql := "INSERT INTO game_server_player_stats" +
+		"	(gid, pid, statsKey, statsValue, created_at)" +
+		"	VALUES " + query + "(?, ?, ?, ?, NOW())" +
+		"	ON DUPLICATE KEY UPDATE" +
+		"	statsValue=VALUES(statsValue)," +
+		"   updated_at=NOW()"
+
+	tM.mapSetServerPlayerStatsVariableAmount[statsAmount], err = tM.db.Prepare(sql)
+	if err != nil {
+		log.Fatalln("Error preparing mapSetServerPlayerStatsVariableAmount with "+sql+" query.", err.Error())
+	}
+
+	return tM.mapSetServerPlayerStatsVariableAmount[statsAmount]
 }
 
 func (tM *TheaterManager) closeStatements() {

@@ -1,6 +1,7 @@
 package theater
 
 import (
+	"github.com/ReviveNetwork/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 )
 
@@ -8,6 +9,40 @@ import (
 func (tM *TheaterManager) UPLA(event GameSpy.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		return
+	}
+
+	var args []interface{}
+
+	keys := 0
+
+	pid := event.Command.Message["PID"]
+	gid := event.Command.Message["GID"]
+
+	for index, value := range event.Command.Message {
+		if index == "TID" || index == "PID" || index == "GID" {
+			continue
+		}
+
+		keys++
+
+		// Strip quotes
+		if len(value) > 0 && value[0] == '"' {
+			value = value[1:]
+		}
+		if len(value) > 0 && value[len(value)-1] == '"' {
+			value = value[:len(value)-1]
+		}
+
+		args = append(args, gid)
+		args = append(args, pid)
+		args = append(args, index)
+		args = append(args, value)
+	}
+
+	var err error
+	_, err = tM.setServerPlayerStatsStatement(keys).Exec(args...)
+	if err != nil {
+		log.Errorln("Failed to update stats for player "+pid, err.Error())
 	}
 
 	// Don't answer

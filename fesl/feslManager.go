@@ -36,8 +36,10 @@ type FeslManager struct {
 	stmtGetHeroesByUserID               *sql.Stmt
 	stmtGetHeroeByName                  *sql.Stmt
 	stmtGetHeroeByID                    *sql.Stmt
+	stmtClearGameServerStats            *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
 	mapSetStatsVariableAmount           map[int]*sql.Stmt
+	mapSetServerStatsVariableAmount     map[int]*sql.Stmt
 }
 
 // New creates and starts a new ClientManager
@@ -58,9 +60,13 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 
 	// Prepare database statements
 	fM.prepareStatements()
-
 	if err != nil {
 		log.Errorln(err)
+	}
+
+	_, err = fM.stmtClearGameServerStats.Exec()
+	if err != nil {
+		log.Panicln("Error clearing out game server stats")
 	}
 
 	// Collect metrics every 10 seconds
@@ -207,6 +213,12 @@ func (fM *FeslManager) prepareStatements() {
 	if err != nil {
 		log.Fatalln("Error preparing stmtGetHeroeByID.", err.Error())
 	}
+
+	fM.stmtClearGameServerStats, err = fM.db.Prepare(
+		"DELETE FROM game_server_stats")
+	if err != nil {
+		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
+	}
 }
 
 func (fM *FeslManager) closeStatements() {
@@ -217,6 +229,7 @@ func (fM *FeslManager) closeStatements() {
 	fM.stmtGetCountOfPermissionByIDAndSlug.Close()
 	fM.stmtGetHeroesByUserID.Close()
 	fM.stmtGetHeroeByName.Close()
+	fM.stmtClearGameServerStats.Close()
 
 	// Close the dynamic lenght getStats statements
 	for index := range fM.mapGetStatsVariableAmount {

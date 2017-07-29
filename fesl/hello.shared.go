@@ -46,7 +46,7 @@ func (fM *FeslManager) hello(event GameSpy.EventClientTLSCommand) {
 	helloPacket["activityTimeoutSecs"] = "10"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
-	helloPacket["theaterIp"] = "heroesawaken.org"
+	helloPacket["theaterIp"] = "theater.heroesawaken.com"
 	if fM.server {
 		helloPacket["theaterPort"] = "18056"
 	} else {
