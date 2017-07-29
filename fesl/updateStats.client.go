@@ -129,18 +129,10 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 						return
 					}
 
-					if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" {
+					// Allow client to increase some stats, idk what they are for yet
+					if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" || key == "c_ltp" || key == "c_sln" || key == "c_ltm" || key == "c_slm" || key == "c_wmid0" || key == "c_wmid1" {
 						// Only allow increasing numbers (like HeroPoints) by the server for now
 						newValue := stats[key].value + intValue
-
-						// Don't allow going into negatives
-						if newValue < 0 {
-							log.Errorln("Going into negatives on " + key)
-
-							event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
-							fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
-							return
-						}
 						value = strconv.FormatFloat(newValue, 'f', 4, 64)
 					} else {
 						log.Errorln("Not allowed to process stat", key)
