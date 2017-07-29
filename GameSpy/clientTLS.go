@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -111,39 +112,60 @@ func (clientTLS *ClientTLS) WriteFESL(msgType string, msg map[string]string, msg
 }
 
 func (clientTLS *ClientTLS) readFESL(data []byte) {
-
-	if len(data) < 12 {
-		return
-	}
-
-	outCommand := new(CommandFESL)
-
 	p := bytes.NewBuffer(data)
-	var payloadId uint32
-	var payloadLen uint32
+	i := 0
+	log.Debugln(hex.EncodeToString(data))
+	var payloadRaw []byte
+	for {
+		outCommand := new(CommandFESL)
 
-	payloadType := string(data[:4])
-	p.Next(4)
+		var payloadId uint32
+		var payloadLen uint32
 
-	binary.Read(p, binary.BigEndian, &payloadId)
-	binary.Read(p, binary.BigEndian, &payloadLen)
+		payloadTypeRaw := make([]byte, 4)
+		_, err := p.Read(payloadTypeRaw)
+		if err != nil {
+			return
+		}
 
-	payloadRaw := data[12:]
-	payload := ProcessFESL(string(payloadRaw))
+		payloadType := string(payloadTypeRaw)
 
-	outCommand.Query = payloadType
-	outCommand.PayloadID = payloadId
-	outCommand.Message = payload
+		binary.Read(p, binary.BigEndian, &payloadId)
 
-	clientTLS.eventChan <- ClientTLSEvent{
-		Name: "command." + payload["TXN"],
-		Data: outCommand,
+		if p.Len() < 4 {
+			log.Noteln("Strange anomly")
+			return
+		}
+
+		binary.Read(p, binary.BigEndian, &payloadLen)
+
+		log.Noteln("Current message: " + payloadType + " - " + fmt.Sprint(payloadId) + " - " + fmt.Sprint(payloadLen))
+
+		if payloadLen < 12 || payloadLen > 1024 {
+			log.Noteln("Strange anomly, would wrap value")
+			return
+		}
+
+		payloadRaw = make([]byte, (payloadLen - 12))
+		p.Read(payloadRaw)
+
+		payload := ProcessFESL(string(payloadRaw))
+
+		outCommand.Query = payloadType
+		outCommand.PayloadID = payloadId
+		outCommand.Message = payload
+
+		clientTLS.eventChan <- ClientTLSEvent{
+			Name: "command." + payloadType,
+			Data: outCommand,
+		}
+		clientTLS.eventChan <- ClientTLSEvent{
+			Name: "command",
+			Data: outCommand,
+		}
+
+		i++
 	}
-	clientTLS.eventChan <- ClientTLSEvent{
-		Name: "command",
-		Data: outCommand,
-	}
-
 }
 
 func (clientTLS *ClientTLS) Close() {
@@ -157,7 +179,7 @@ func (clientTLS *ClientTLS) Close() {
 
 func (clientTLS *ClientTLS) handleRequest() {
 	clientTLS.IsActive = true
-	buf := make([]byte, 4096) // buffer
+	buf := make([]byte, 8192) // buffer
 
 	for clientTLS.IsActive {
 		n, err := (*clientTLS.conn).Read(buf)
@@ -184,7 +206,7 @@ func (clientTLS *ClientTLS) handleRequest() {
 
 		}
 		clientTLS.readFESL(buf[:n])
-		buf = make([]byte, 4096) // buffer
+		buf = make([]byte, 8192) // buffer
 	}
 
 }
