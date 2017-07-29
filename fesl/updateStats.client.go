@@ -117,32 +117,37 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 				log.Noteln("Updating stat", key+":", event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"], "+", stats[key].value)
 				// We are dealing with a number
 				value = event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]
-				intValue, err := strconv.ParseFloat(value, 64)
-				if err != nil {
-					// Couldn't transfer it to a number, skip updating this stat
-					log.Noteln("Skipping stat " + key)
-					continue
-				}
 
-				if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" {
-					// Only allow increasing numbers (like HeroPoints) by the server for now
-					newValue := stats[key].value + intValue
-
-					// Don't allow going into negatives
-					if newValue < 0 {
-						log.Errorln("Going into negatives on " + key)
-
+				// Don't add up these field:
+				if key != "xp" {
+					intValue, err := strconv.ParseFloat(value, 64)
+					if err != nil {
+						// Couldn't transfer it to a number, skip updating this stat
+						log.Errorln("Skipping stat "+key, err)
 						event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
 						fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
 						return
 					}
 
-					value = strconv.FormatFloat(newValue, 'f', 4, 64)
-				} else {
-					log.Errorln("Not allowed to process stat", key)
-					event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
-					fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
-					return
+					if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" {
+						// Only allow increasing numbers (like HeroPoints) by the server for now
+						newValue := stats[key].value + intValue
+
+						// Don't allow going into negatives
+						if newValue < 0 {
+							log.Errorln("Going into negatives on " + key)
+
+							event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
+							fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
+							return
+						}
+						value = strconv.FormatFloat(newValue, 'f', 4, 64)
+					} else {
+						log.Errorln("Not allowed to process stat", key)
+						event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
+						fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
+						return
+					}
 				}
 			}
 
