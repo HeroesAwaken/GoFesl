@@ -3,6 +3,7 @@ package fesl
 import (
 	"strconv"
 
+	"github.com/ReviveNetwork/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/matchmaking"
@@ -37,9 +38,15 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	i := 0
 	for k := range matchmaking.Games {
 		gameID := k
+
+		gameServer := new(lib.RedisObject)
+		gameServer.New(fM.redis, "gdata", gameID)
+
 		answer["props.{games}."+strconv.Itoa(i)+".lid"] = "1"
-		answer["props.{games}."+strconv.Itoa(i)+".fit"] = "1001"
+		answer["props.{games}."+strconv.Itoa(i)+".fit"] = strconv.Itoa(len(matchmaking.Games) - i)
 		answer["props.{games}."+strconv.Itoa(i)+".gid"] = gameID
+
+		log.Noteln(gameServer.Get("NAME") + " GID: " + gameID + " with fitness of: " + strconv.Itoa(len(matchmaking.Games)-i))
 		i++
 	}
 
