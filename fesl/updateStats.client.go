@@ -104,6 +104,7 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 			value := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]
 
 			if value == "" {
+				log.Noteln("Updating stat", key+":", event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"], "+", stats[key].value)
 				// We are dealing with a number
 				value = event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]
 				intValue, err := strconv.ParseFloat(value, 64)
@@ -113,9 +114,25 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 					continue
 				}
 
-				if intValue <= 0 || event.Client.RedisState.Get("clientType") != "server" {
+				if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" {
 					// Only allow increasing numbers (like HeroPoints) by the server for now
-					value = strconv.FormatFloat(stats[key].value+intValue, 'f', 4, 64)
+					newValue := stats[key].value + intValue
+
+					// Don't allow going into negatives
+					if newValue < 0 {
+						log.Errorln("Going into negatives on " + key)
+
+						event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
+						fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
+						return
+					}
+
+					value = strconv.FormatFloat(newValue, 'f', 4, 64)
+				} else {
+					log.Errorln("Not allowed to process stat", key)
+					event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
+					fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
+					return
 				}
 			}
 
