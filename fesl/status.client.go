@@ -1,6 +1,8 @@
 package fesl
 
 import (
+	"strconv"
+
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/matchmaking"
@@ -30,12 +32,25 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	answer["props.{resultType}"] = "JOIN"
 
 	// Find latest game (do better later)
-	gameID := matchmaking.FindAvailableGID()
+	//gameID := matchmaking.FindAvailableGID()
 
-	answer["props.{games}.0.lid"] = "1"
-	answer["props.{games}.0.fit"] = "1001"
-	answer["props.{games}.0.gid"] = gameID
-	answer["props.{games}.[]"] = "1"
+	i := 0
+	for k := range matchmaking.Games {
+		gameID := k
+		answer["props.{games}."+strconv.Itoa(i)+".lid"] = "1"
+		answer["props.{games}."+strconv.Itoa(i)+".fit"] = "1001"
+		answer["props.{games}."+strconv.Itoa(i)+".gid"] = gameID
+		i++
+	}
+
+	answer["props.{games}.[]"] = strconv.Itoa(i)
+
+	/*
+		answer["props.{games}.0.lid"] = "1"
+		answer["props.{games}.0.fit"] = "1001"
+		answer["props.{games}.0.gid"] = gameID
+		answer["props.{games}.[]"] = "1"
+	*/
 	/*
 		answer["props.{games}.1.lid"] = "2"
 		answer["props.{games}.1.fit"] = "100"
