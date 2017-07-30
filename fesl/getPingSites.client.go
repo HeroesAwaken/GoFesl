@@ -14,20 +14,14 @@ func (fM *FeslManager) GetPingSites(event GameSpy.EventClientTLSCommand) {
 
 	answer := make(map[string]string)
 	answer["TXN"] = "GetPingSites"
-	answer["minPingSitesToPing"] = "0"
-	answer["pingSites.[]"] = "4"
-	answer["pingSites.0.addr"] = "127.0.0.1"
-	answer["pingSites.0.name"] = "gva"
+	answer["minPingSitesToPing"] = "2"
+	answer["pingSites.[]"] = "2"
+	answer["pingSites.0.addr"] = "45.77.66.233"
+	answer["pingSites.0.name"] = "euc"
 	answer["pingSites.0.type"] = "0"
-	answer["pingSites.1.addr"] = "127.0.0.1"
-	answer["pingSites.1.name"] = "nrt"
+	answer["pingSites.1.addr"] = "45.77.76.193"
+	answer["pingSites.1.name"] = "use"
 	answer["pingSites.1.type"] = "0"
-	answer["pingSites.2.addr"] = "127.0.0.1"
-	answer["pingSites.2.name"] = "iad"
-	answer["pingSites.2.type"] = "0"
-	answer["pingSites.3.addr"] = "127.0.0.1"
-	answer["pingSites.3.name"] = "sjc"
-	answer["pingSites.3.type"] = "0"
 
 	event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
