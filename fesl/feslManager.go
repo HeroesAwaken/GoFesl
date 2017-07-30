@@ -66,7 +66,7 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 
 	_, err = fM.stmtClearGameServerStats.Exec()
 	if err != nil {
-		log.Panicln("Error clearing out game server stats")
+		log.Panicln("Error clearing out game server stats", err)
 	}
 
 	// Collect metrics every 10 seconds
