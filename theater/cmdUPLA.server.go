@@ -1,8 +1,8 @@
 package theater
 
 import (
-	"github.com/ReviveNetwork/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // UPLA - SERVER presumably "update player"? valid response reqiured
