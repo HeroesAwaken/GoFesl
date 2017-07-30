@@ -83,6 +83,23 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements></entitlements>")
+	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements></entitlements>")
+}
+
+func offersHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products></products>")
+	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products><product></product></products>")
+
+}
+
+func walletsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
+	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
+
+}
+
 func collectGlobalMetrics(iDB *core.InfluxDB) {
 	runtime.ReadMemStats(&mem)
 	tags := map[string]string{"metric": "server_metrics", "server": "global"}
@@ -108,10 +125,17 @@ func main() {
 	r.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	r.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
+
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
 	r.HandleFunc("/relationships/roster/server:7eb6155c-ac70-4567-9fc4-732d56a9334a", relationship)
 	r.HandleFunc("/relationships/roster/nucleus:158", relationship)
 	r.HandleFunc("/relationships/roster/nucleus:1817224672", relationship)
+	r.HandleFunc("/relationships/status/nucleus:4", relationship)
+
+	r.HandleFunc("/nucleus/entitlements/2", entitlementsHandler)
+	r.HandleFunc("/nucleus/wallets/2", walletsHandler)
+	r.HandleFunc("/ofb/products", offersHandler)
+
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {
