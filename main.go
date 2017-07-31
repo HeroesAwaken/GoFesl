@@ -13,6 +13,7 @@ import (
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/theater"
 	"github.com/go-redis/redis"
+	"github.com/gorilla/mux"
 
 	"net/http"
 	"net/http/pprof"
@@ -84,17 +85,20 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
+	//vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
 	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
+	//vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products></products>")
 	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products><product></product></products>")
 
 }
 
 func walletsHandler(w http.ResponseWriter, r *http.Request) {
+	//vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
 	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts><walletAccount><currency>hp</currency><balance>1</balance></billingAccounts>")
 
@@ -117,7 +121,7 @@ func collectGlobalMetrics(iDB *core.InfluxDB) {
 func main() {
 	log.Notef("Starting up v%s", Version)
 
-	r := http.NewServeMux()
+	r := mux.NewRouter()
 
 	// Register pprof handlers
 	r.HandleFunc("/debug/pprof/", pprof.Index)
@@ -127,22 +131,19 @@ func main() {
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
-	r.HandleFunc("/relationships/roster/server:7eb6155c-ac70-4567-9fc4-732d56a9334a", relationship)
-	r.HandleFunc("/relationships/roster/nucleus:158", relationship)
-	r.HandleFunc("/relationships/roster/nucleus:1817224672", relationship)
-	r.HandleFunc("/relationships/status/nucleus:4", relationship)
+	r.HandleFunc("/relationships/roster/{type}:{guid}", relationship)
 
-	r.HandleFunc("/nucleus/entitlements/2", entitlementsHandler)
-	r.HandleFunc("/nucleus/wallets/2", walletsHandler)
+	r.HandleFunc("/nucleus/entitlements/{heroID}", entitlementsHandler)
+	r.HandleFunc("/nucleus/wallets/{heroID}", walletsHandler)
 	r.HandleFunc("/ofb/products", offersHandler)
 
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {
-		log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
+		log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
 	}()
 	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
+		log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
 	}()
 	// Startup done
 
