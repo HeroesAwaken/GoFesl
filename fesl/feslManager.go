@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
+	"github.com/HeroesAwaken/GoFesl2/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 
@@ -26,6 +27,7 @@ type FeslManager struct {
 	stopTicker    chan bool
 	server        bool
 	iDB           *core.InfluxDB
+	localMode     bool
 
 	// Database Statements
 	stmtGetUserByGameToken              *sql.Stmt
@@ -43,7 +45,7 @@ type FeslManager struct {
 }
 
 // New creates and starts a new ClientManager
-func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
+func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB, localMode bool) {
 	var err error
 
 	fM.socket = new(GameSpy.SocketTLS)
@@ -54,6 +56,7 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.stopTicker = make(chan bool, 1)
 	fM.server = server
 	fM.iDB = iDB
+	fM.localMode = localMode
 
 	fM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
 	fM.mapSetStatsVariableAmount = make(map[int]*sql.Stmt)
@@ -66,7 +69,7 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 
 	_, err = fM.stmtClearGameServerStats.Exec()
 	if err != nil {
-		log.Panicln("Error clearing out game server stats")
+		log.Panicln("Error clearing out game server stats", err)
 	}
 
 	// Collect metrics every 10 seconds
@@ -399,6 +402,15 @@ func (fM *FeslManager) close(event GameSpy.EventClientTLSClose) {
 	log.Noteln("Client closed.")
 
 	if event.Client.RedisState != nil {
+		if event.Client.RedisState.Get("lkeys") != "" {
+			lkeys := strings.Split(event.Client.RedisState.Get("lkeys"), ";")
+			for _, lkey := range lkeys {
+				lkeyRedis := new(lib.RedisObject)
+				lkeyRedis.New(fM.redis, "lkeys", lkey)
+				lkeyRedis.Delete()
+			}
+		}
+
 		event.Client.RedisState.Delete()
 	}
 

@@ -14,6 +14,7 @@ import (
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/theater"
 	"github.com/go-redis/redis"
+	"github.com/gorilla/mux"
 
 	"net/http"
 	"net/http/pprof"
@@ -25,6 +26,8 @@ func init() {
 	flag.StringVar(&logLevel, "logLevel", "error", "LogLevel [error|warning|note|debug]")
 	flag.StringVar(&certFileFlag, "cert", "cert.pem", "[HTTPS] Location of your certification file. Env: LOUIS_HTTPS_CERT")
 	flag.StringVar(&keyFileFlag, "key", "key.pem", "[HTTPS] Location of your private key file. Env: LOUIS_HTTPS_KEY")
+	flag.BoolVar(&localMode, "localMode", false, "Use in local modus")
+
 	flag.Parse()
 
 	log.SetLevel(logLevel)
@@ -40,6 +43,7 @@ var (
 	logLevel     string
 	certFileFlag string
 	keyFileFlag  string
+	localMode    bool
 
 	// CompileVersion we are receiving by the build command
 	CompileVersion = "0"
@@ -65,9 +69,10 @@ func emtpyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func relationship(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 	log.Noteln(r.URL.String())
-	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
-	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
+	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>" + vars["id"] + "</realid></update>")
+	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>"+vars["id"]+"</realid></update>")
 }
 
 func sessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -85,8 +90,24 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
-	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
+	fmt.Fprintf(w,
+		"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?>"+
+			"<entitlements>"+
+			"	<entitlement>"+
+			"		<entitlementId>1</entitlementId>"+
+			"		<entitlementTag>WEST_Custom_Item_142</entitlementTag>"+
+			"		<status>ACTIVE</status>"+
+			"		<userId>"+vars["heroID"]+"</userId>"+
+			"	</entitlement>"+
+			"	<entitlement>"+
+			"		<entitlementId>1253</entitlementId>"+
+			"		<entitlementTag>WEST_Custom_Item_142</entitlementTag>"+
+			"		<status>ACTIVE</status>"+
+			"		<userId>"+vars["heroID"]+"</userId>"+
+			"	</entitlement>"+
+			"</entitlements>")
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,6 +119,7 @@ func offersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func walletsHandler(w http.ResponseWriter, r *http.Request) {
+	//vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
 	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts><walletAccount><currency>hp</currency><balance>1</balance></billingAccounts>")
 
@@ -120,7 +142,7 @@ func collectGlobalMetrics(iDB *core.InfluxDB) {
 func main() {
 	log.Notef("Starting up v%s", Version)
 
-	r := http.NewServeMux()
+	r := mux.NewRouter()
 
 	// Register pprof handlers
 	r.HandleFunc("/debug/pprof/", pprof.Index)
@@ -130,23 +152,30 @@ func main() {
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
-	r.HandleFunc("/relationships/roster/server:7eb6155c-ac70-4567-9fc4-732d56a9334a", relationship)
-	r.HandleFunc("/relationships/roster/nucleus:158", relationship)
-	r.HandleFunc("/relationships/roster/nucleus:1817224672", relationship)
-	r.HandleFunc("/relationships/status/nucleus:4", relationship)
+	r.HandleFunc("/relationships/roster/{type}:{id}", relationship)
 
-	r.HandleFunc("/nucleus/entitlements/2", entitlementsHandler)
-	r.HandleFunc("/nucleus/wallets/2", walletsHandler)
+	r.HandleFunc("/nucleus/entitlements/{heroID}", entitlementsHandler)
+	r.HandleFunc("/nucleus/wallets/{heroID}", walletsHandler)
 	r.HandleFunc("/ofb/products", offersHandler)
 
 	r.HandleFunc("/", emtpyHandler)
 
-	go func() {
-		log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
-	}()
-	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
-	}()
+	if localMode {
+		go func() {
+			log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
+		}()
+		go func() {
+			log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
+		}()
+	} else {
+
+		go func() {
+			log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
+		}()
+		go func() {
+			log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
+		}()
+	}
 	// Startup done
 
 	// DB Connection
@@ -182,14 +211,14 @@ func main() {
 	}()
 
 	feslManager := new(fesl.FeslManager)
-	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection)
+	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection, localMode)
 	serverManager := new(fesl.FeslManager)
-	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient, metricConnection)
+	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient, metricConnection, localMode)
 
 	theaterManager := new(theater.TheaterManager)
-	theaterManager.New("TM", "18275", dbSQL, redisClient, metricConnection)
+	theaterManager.New("TM", "18275", dbSQL, redisClient, metricConnection, localMode)
 	servertheaterManager := new(theater.TheaterManager)
-	servertheaterManager.New("STM", "18056", dbSQL, redisClient, metricConnection)
+	servertheaterManager.New("STM", "18056", dbSQL, redisClient, metricConnection, localMode)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

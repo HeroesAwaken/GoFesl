@@ -68,9 +68,11 @@ type TheaterManager struct {
 	stopTicker       chan bool
 	cacheCounters    *lib.RedisObject
 	iDB              *core.InfluxDB
+	localMode        bool
 
 	// Database Statements
 	stmtGetHeroeByID                      *sql.Stmt
+	stmtDelteServerStatsByGID             *sql.Stmt
 	mapGetStatsVariableAmount             map[int]*sql.Stmt
 	mapSetServerStatsVariableAmount       map[int]*sql.Stmt
 	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
@@ -79,7 +81,7 @@ type TheaterManager struct {
 const COUNTER_GID_KEY = "counters:GID"
 
 // New creates and starts a new TheaterManager
-func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
+func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB, localMode bool) {
 	var err error
 
 	tM.socket = new(GameSpy.Socket)
@@ -89,6 +91,7 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	tM.name = name
 	tM.eventsChannel, err = tM.socket.New(tM.name, port, true)
 	tM.iDB = iDB
+	tM.localMode = localMode
 	if err != nil {
 		log.Errorln(err)
 	}
@@ -126,6 +129,12 @@ func (tM *TheaterManager) prepareStatements() {
 			"	WHERE id = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtGetHeroeByID.", err.Error())
+	}
+
+	tM.stmtDelteServerStatsByGID, err = tM.db.Prepare(
+		"DELETE FROM game_server_stats WHERE gid = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
 	}
 }
 
@@ -274,6 +283,8 @@ func (tM *TheaterManager) run() {
 				go tM.PENT(event.Data.(GameSpy.EventClientFESLCommand))
 			case event.Name == "client.command.UPLA":
 				go tM.UPLA(event.Data.(GameSpy.EventClientFESLCommand))
+			case event.Name == "client.close":
+				tM.close(event.Data.(GameSpy.EventClientClose))
 			case event.Name == "client.command":
 				tM.LogCommand(event.Data.(GameSpy.EventClientFESLCommand))
 				log.Debugf("Got event %s: %v", event.Name, event.Data.(GameSpy.EventClientFESLCommand).Command)
@@ -361,8 +372,26 @@ func (tM *TheaterManager) newClient(event GameSpy.EventNewClient) {
 	}()
 }
 
-func (tM *TheaterManager) close(event GameSpy.EventClientTLSClose) {
+func (tM *TheaterManager) close(event GameSpy.EventClientClose) {
 	log.Noteln("Client closed.")
+
+	if event.Client.RedisState != nil {
+
+		if event.Client.RedisState.Get("gdata:GID") != "" {
+			// Delete game from db
+
+			_, err := tM.stmtDelteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
+			if err != nil {
+				log.Errorln("Failed deleting settings for  "+event.Client.RedisState.Get("gdata:GID"), err.Error())
+			}
+
+			gameServer := new(lib.RedisObject)
+			gameServer.New(tM.redis, "gdata", event.Client.RedisState.Get("gdata:GID"))
+			gameServer.Delete()
+		}
+
+		event.Client.RedisState.Delete()
+	}
 
 	if !event.Client.State.HasLogin {
 		return
