@@ -68,9 +68,10 @@ func emtpyHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func relationship(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
 	log.Noteln(r.URL.String())
-	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
-	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>1817224672</realid></update>")
+	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>" + vars["id"] + "</realid></update>")
+	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>"+vars["id"]+"</realid></update>")
 }
 
 func sessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,9 +89,24 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
+	vars := mux.Vars(r)
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
-	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
+	fmt.Fprintf(w,
+		"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?>"+
+			"<entitlements>"+
+			"	<entitlement>"+
+			"		<entitlementId>1</entitlementId>"+
+			"		<entitlementTag>WEST_Custom_Item_142</entitlementTag>"+
+			"		<status>ACTIVE</status>"+
+			"		<userId>"+vars["heroID"]+"</userId>"+
+			"	</entitlement>"+
+			"	<entitlement>"+
+			"		<entitlementId>1253</entitlementId>"+
+			"		<entitlementTag>WEST_Custom_Item_142</entitlementTag>"+
+			"		<status>ACTIVE</status>"+
+			"		<userId>"+vars["heroID"]+"</userId>"+
+			"	</entitlement>"+
+			"</entitlements>")
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +150,7 @@ func main() {
 	r.HandleFunc("/debug/pprof/trace", pprof.Trace)
 
 	r.HandleFunc("/nucleus/authToken", sessionHandler)
-	r.HandleFunc("/relationships/roster/{type}:{guid}", relationship)
+	r.HandleFunc("/relationships/roster/{type}:{id}", relationship)
 
 	r.HandleFunc("/nucleus/entitlements/{heroID}", entitlementsHandler)
 	r.HandleFunc("/nucleus/wallets/{heroID}", walletsHandler)
