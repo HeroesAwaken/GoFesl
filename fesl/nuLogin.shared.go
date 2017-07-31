@@ -67,6 +67,7 @@ func (fM *FeslManager) NuLogin(event GameSpy.EventClientTLSCommand) {
 	loginPacket["userId"] = id
 	loginPacket["nuid"] = username
 	loginPacket["lkey"] = lkey
+	event.Client.RedisState.Set("lkeys", event.Client.RedisState.Get("lkeys")+";"+lkey)
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }
@@ -108,6 +109,8 @@ func (fM *FeslManager) NuLoginServer(event GameSpy.EventClientTLSCommand) {
 	loginPacket["userId"] = userID
 	loginPacket["nuid"] = username
 	loginPacket["lkey"] = lkey
+
+	event.Client.RedisState.Set("lkeys", event.Client.RedisState.Get("lkeys")+";"+lkey)
 	event.Client.WriteFESL(event.Command.Query, loginPacket, event.Command.PayloadID)
 	fM.logAnswer(event.Command.Query, loginPacket, event.Command.PayloadID)
 }

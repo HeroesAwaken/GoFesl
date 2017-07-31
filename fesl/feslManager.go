@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
+	"github.com/HeroesAwaken/GoFesl2/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 
@@ -399,6 +400,15 @@ func (fM *FeslManager) newClient(event GameSpy.EventNewClientTLS) {
 
 func (fM *FeslManager) close(event GameSpy.EventClientTLSClose) {
 	log.Noteln("Client closed.")
+
+	if event.Client.RedisState.Get("lkeys") != "" {
+		lkeys := strings.Split(event.Client.RedisState.Get("lkeys"), ";")
+		for _, lkey := range lkeys {
+			lkeyRedis := new(lib.RedisObject)
+			lkeyRedis.New(fM.redis, "lkeys", lkey)
+			lkeyRedis.Delete()
+		}
+	}
 
 	if event.Client.RedisState != nil {
 		event.Client.RedisState.Delete()

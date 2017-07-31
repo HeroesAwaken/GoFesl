@@ -366,6 +366,16 @@ func (tM *TheaterManager) newClient(event GameSpy.EventNewClient) {
 func (tM *TheaterManager) close(event GameSpy.EventClientTLSClose) {
 	log.Noteln("Client closed.")
 
+	if event.Client.RedisState.Get("gdata:GID") != "" {
+		gameServer := new(lib.RedisObject)
+		gameServer.New(tM.redis, "gdata", event.Client.RedisState.Get("gdata:GID"))
+		gameServer.Delete()
+	}
+
+	if event.Client.RedisState != nil {
+		event.Client.RedisState.Delete()
+	}
+
 	if !event.Client.State.HasLogin {
 		return
 	}

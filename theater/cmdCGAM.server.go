@@ -66,6 +66,8 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 	gameServer.Set("ACTIVE-PLAYERS", "0")
 	gameServer.Set("QUEUE-LENGTH", "0")
 
+	event.Client.RedisState.Set("gdata:GID", gameID)
+
 	var err error
 	_, err = tM.setServerStatsStatement(keys).Exec(args...)
 	if err != nil {
