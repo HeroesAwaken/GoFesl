@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime"
@@ -89,8 +90,10 @@ func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
-	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products></products>")
-	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><products><product></product></products>")
+	contents, _ := ioutil.ReadFile("api/products.xml")
+	str := string(contents)
+	log.Noteln(str)
+	fmt.Fprintf(w, str)
 
 }
 
