@@ -132,7 +132,7 @@ func (tM *TheaterManager) prepareStatements() {
 	}
 
 	tM.stmtDelteServerStatsByGID, err = tM.db.Prepare(
-		"DELETE FROM game_server_stats WHERE gid = ß")
+		"DELETE FROM game_server_stats WHERE gid = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
 	}
@@ -283,6 +283,8 @@ func (tM *TheaterManager) run() {
 				go tM.PENT(event.Data.(GameSpy.EventClientFESLCommand))
 			case event.Name == "client.command.UPLA":
 				go tM.UPLA(event.Data.(GameSpy.EventClientFESLCommand))
+			case event.Name == "client.close":
+				tM.close(event.Data.(GameSpy.EventClientClose))
 			case event.Name == "client.command":
 				tM.LogCommand(event.Data.(GameSpy.EventClientFESLCommand))
 				log.Debugf("Got event %s: %v", event.Name, event.Data.(GameSpy.EventClientFESLCommand).Command)
@@ -370,23 +372,24 @@ func (tM *TheaterManager) newClient(event GameSpy.EventNewClient) {
 	}()
 }
 
-func (tM *TheaterManager) close(event GameSpy.EventClientTLSClose) {
+func (tM *TheaterManager) close(event GameSpy.EventClientClose) {
 	log.Noteln("Client closed.")
 
-	if event.Client.RedisState.Get("gdata:GID") != "" {
-		// Delete game from db
+	if event.Client.RedisState != nil {
 
-		_, err := tM.stmtDelteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
-		if err != nil {
-			log.Errorln("Failed deleting settings for  "+event.Client.RedisState.Get("gdata:GID"), err.Error())
+		if event.Client.RedisState.Get("gdata:GID") != "" {
+			// Delete game from db
+
+			_, err := tM.stmtDelteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
+			if err != nil {
+				log.Errorln("Failed deleting settings for  "+event.Client.RedisState.Get("gdata:GID"), err.Error())
+			}
+
+			gameServer := new(lib.RedisObject)
+			gameServer.New(tM.redis, "gdata", event.Client.RedisState.Get("gdata:GID"))
+			gameServer.Delete()
 		}
 
-		gameServer := new(lib.RedisObject)
-		gameServer.New(tM.redis, "gdata", event.Client.RedisState.Get("gdata:GID"))
-		gameServer.Delete()
-	}
-
-	if event.Client.RedisState != nil {
 		event.Client.RedisState.Delete()
 	}
 

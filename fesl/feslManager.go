@@ -401,16 +401,16 @@ func (fM *FeslManager) newClient(event GameSpy.EventNewClientTLS) {
 func (fM *FeslManager) close(event GameSpy.EventClientTLSClose) {
 	log.Noteln("Client closed.")
 
-	if event.Client.RedisState.Get("lkeys") != "" {
-		lkeys := strings.Split(event.Client.RedisState.Get("lkeys"), ";")
-		for _, lkey := range lkeys {
-			lkeyRedis := new(lib.RedisObject)
-			lkeyRedis.New(fM.redis, "lkeys", lkey)
-			lkeyRedis.Delete()
-		}
-	}
-
 	if event.Client.RedisState != nil {
+		if event.Client.RedisState.Get("lkeys") != "" {
+			lkeys := strings.Split(event.Client.RedisState.Get("lkeys"), ";")
+			for _, lkey := range lkeys {
+				lkeyRedis := new(lib.RedisObject)
+				lkeyRedis.New(fM.redis, "lkeys", lkey)
+				lkeyRedis.Delete()
+			}
+		}
+
 		event.Client.RedisState.Delete()
 	}
 
