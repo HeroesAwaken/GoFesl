@@ -84,8 +84,8 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements></entitlements>")
-	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements></entitlements>")
+	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
+	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,7 +96,7 @@ func offersHandler(w http.ResponseWriter, r *http.Request) {
 
 func walletsHandler(w http.ResponseWriter, r *http.Request) {
 	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
-	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
+	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts><walletAccount><currency>hp</currency><balance>1</balance></billingAccounts>")
 
 }
 
@@ -139,10 +139,10 @@ func main() {
 	r.HandleFunc("/", emtpyHandler)
 
 	go func() {
-		log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
+		log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
 	}()
 	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
+		log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
 	}()
 	// Startup done
 
