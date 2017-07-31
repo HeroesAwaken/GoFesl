@@ -68,6 +68,7 @@ type TheaterManager struct {
 	stopTicker       chan bool
 	cacheCounters    *lib.RedisObject
 	iDB              *core.InfluxDB
+	localMode        bool
 
 	// Database Statements
 	stmtGetHeroeByID                      *sql.Stmt
@@ -79,7 +80,7 @@ type TheaterManager struct {
 const COUNTER_GID_KEY = "counters:GID"
 
 // New creates and starts a new TheaterManager
-func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
+func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB, localMode bool) {
 	var err error
 
 	tM.socket = new(GameSpy.Socket)
@@ -89,6 +90,7 @@ func (tM *TheaterManager) New(name string, port string, db *sql.DB, redis *redis
 	tM.name = name
 	tM.eventsChannel, err = tM.socket.New(tM.name, port, true)
 	tM.iDB = iDB
+	tM.localMode = localMode
 	if err != nil {
 		log.Errorln(err)
 	}

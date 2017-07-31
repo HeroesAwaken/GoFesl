@@ -26,6 +26,7 @@ type FeslManager struct {
 	stopTicker    chan bool
 	server        bool
 	iDB           *core.InfluxDB
+	localMode     bool
 
 	// Database Statements
 	stmtGetUserByGameToken              *sql.Stmt
@@ -43,7 +44,7 @@ type FeslManager struct {
 }
 
 // New creates and starts a new ClientManager
-func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB) {
+func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB, localMode bool) {
 	var err error
 
 	fM.socket = new(GameSpy.SocketTLS)
@@ -54,6 +55,7 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.stopTicker = make(chan bool, 1)
 	fM.server = server
 	fM.iDB = iDB
+	fM.localMode = localMode
 
 	fM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
 	fM.mapSetStatsVariableAmount = make(map[int]*sql.Stmt)

@@ -25,6 +25,8 @@ func init() {
 	flag.StringVar(&logLevel, "logLevel", "error", "LogLevel [error|warning|note|debug]")
 	flag.StringVar(&certFileFlag, "cert", "cert.pem", "[HTTPS] Location of your certification file. Env: LOUIS_HTTPS_CERT")
 	flag.StringVar(&keyFileFlag, "key", "key.pem", "[HTTPS] Location of your private key file. Env: LOUIS_HTTPS_KEY")
+	flag.BoolVar(&localMode, "localMode", false, "Use in local modus")
+
 	flag.Parse()
 
 	log.SetLevel(logLevel)
@@ -40,6 +42,7 @@ var (
 	logLevel     string
 	certFileFlag string
 	keyFileFlag  string
+	localMode    bool
 
 	// CompileVersion we are receiving by the build command
 	CompileVersion = "0"
@@ -139,12 +142,22 @@ func main() {
 
 	r.HandleFunc("/", emtpyHandler)
 
-	go func() {
-		log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
-	}()
-	go func() {
-		log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
-	}()
+	if localMode {
+		go func() {
+			log.Noteln(http.ListenAndServe("0.0.0.0:80", r))
+		}()
+		go func() {
+			log.Noteln(http.ListenAndServeTLS("0.0.0.0:443", certFileFlag, keyFileFlag, r))
+		}()
+	} else {
+
+		go func() {
+			log.Noteln(http.ListenAndServe("0.0.0.0:8080", r))
+		}()
+		go func() {
+			log.Noteln(http.ListenAndServeTLS("0.0.0.0:8443", certFileFlag, keyFileFlag, r))
+		}()
+	}
 	// Startup done
 
 	// DB Connection
@@ -180,14 +193,14 @@ func main() {
 	}()
 
 	feslManager := new(fesl.FeslManager)
-	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection)
+	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection, localMode)
 	serverManager := new(fesl.FeslManager)
-	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient, metricConnection)
+	serverManager.New("SFM", "18051", certFileFlag, keyFileFlag, true, dbSQL, redisClient, metricConnection, localMode)
 
 	theaterManager := new(theater.TheaterManager)
-	theaterManager.New("TM", "18275", dbSQL, redisClient, metricConnection)
+	theaterManager.New("TM", "18275", dbSQL, redisClient, metricConnection, localMode)
 	servertheaterManager := new(theater.TheaterManager)
-	servertheaterManager.New("STM", "18056", dbSQL, redisClient, metricConnection)
+	servertheaterManager.New("STM", "18056", dbSQL, redisClient, metricConnection, localMode)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
