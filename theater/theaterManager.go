@@ -11,6 +11,7 @@ import (
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/matchmaking"
 	"github.com/go-redis/redis"
 )
 
@@ -73,6 +74,7 @@ type TheaterManager struct {
 	// Database Statements
 	stmtGetHeroeByID                      *sql.Stmt
 	stmtDelteServerStatsByGID             *sql.Stmt
+	stmtDelteGameByGIDAndShard            *sql.Stmt
 	mapGetStatsVariableAmount             map[int]*sql.Stmt
 	mapSetServerStatsVariableAmount       map[int]*sql.Stmt
 	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
@@ -135,6 +137,12 @@ func (tM *TheaterManager) prepareStatements() {
 
 	tM.stmtDelteServerStatsByGID, err = tM.db.Prepare(
 		"DELETE FROM game_server_stats WHERE gid = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
+	}
+
+	tM.stmtDelteGameByGIDAndShard, err = tM.db.Prepare(
+		"DELETE FROM game_server_stats WHERE gid = ? AND shard = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
 	}
@@ -380,12 +388,20 @@ func (tM *TheaterManager) close(event GameSpy.EventClientClose) {
 	if event.Client.RedisState != nil {
 
 		if event.Client.RedisState.Get("gdata:GID") != "" {
-			// Delete game from db
 
+			// Delete game from db
 			_, err := tM.stmtDelteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
 			if err != nil {
 				log.Errorln("Failed deleting settings for  "+event.Client.RedisState.Get("gdata:GID"), err.Error())
 			}
+
+			_, err = tM.stmtDelteGameByGIDAndShard.Exec(event.Client.RedisState.Get("gdata:GID"), Shard)
+			if err != nil {
+				log.Errorln("Failed deleting game for "+event.Client.RedisState.Get("gdata:GID")+" and shard "+Shard, err.Error())
+			}
+
+			// Delete game out of matchmaking array
+			delete(matchmaking.Games, event.Client.RedisState.Get("gdata:GID"))
 
 			gameServer := new(lib.RedisObject)
 			gameServer.New(tM.redis, "gdata", event.Client.RedisState.Get("gdata:GID"))
