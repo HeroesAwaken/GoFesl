@@ -101,6 +101,10 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 		keys, _ = strconv.Atoi(event.Command.Message["u."+strconv.Itoa(i)+".s.[]"])
 		for j := 0; j < keys; j++ {
 
+			if event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".ut"] != "3" {
+				log.Noteln("Update new Type:", event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"], event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"], event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".ut"], event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"], event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".pt"])
+			}
+
 			key := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"]
 			value := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]
 
@@ -120,8 +124,8 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 				// We are dealing with a number
 				value = event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"]
 
-				// Don't add up these field:
-				if key != "xp" {
+				// ut seems to be 3 when we need to add up (xp has ut 0 when you level'ed up, otherwise 3)
+				if event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".ut"] == "3" {
 					intValue, err := strconv.ParseFloat(value, 64)
 					if err != nil {
 						// Couldn't transfer it to a number, skip updating this stat
