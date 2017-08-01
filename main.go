@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
@@ -12,6 +13,7 @@ import (
 	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/SpencerSharkey/GoFesl/fesl"
 	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/SpencerSharkey/GoFesl/matchmaking"
 	"github.com/SpencerSharkey/GoFesl/theater"
 	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
@@ -61,6 +63,8 @@ var (
 	mem runtime.MemStats
 
 	AppName = "HeroesServer"
+
+	Shard string
 )
 
 func emtpyHandler(w http.ResponseWriter, r *http.Request) {
@@ -210,6 +214,12 @@ func main() {
 		}
 	}()
 
+	Shard := RandStringBytes(6)
+	log.Noteln("Starting up as shard: " + Shard)
+	matchmaking.Shard = Shard
+	theater.Shard = Shard
+	fesl.Shard = Shard
+
 	feslManager := new(fesl.FeslManager)
 	feslManager.New("FM", "18270", certFileFlag, keyFileFlag, false, dbSQL, redisClient, metricConnection, localMode)
 	serverManager := new(fesl.FeslManager)
@@ -226,4 +236,14 @@ func main() {
 		log.Noteln("Captured" + sig.String() + ". Shutting down.")
 		os.Exit(0)
 	}
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyz"
+
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }

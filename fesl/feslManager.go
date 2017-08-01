@@ -44,6 +44,8 @@ type FeslManager struct {
 	mapSetServerStatsVariableAmount     map[int]*sql.Stmt
 }
 
+var Shard string
+
 // New creates and starts a new ClientManager
 func (fM *FeslManager) New(name string, port string, certFile string, keyFile string, server bool, db *sql.DB, redis *redis.Client, iDB *core.InfluxDB, localMode bool) {
 	var err error

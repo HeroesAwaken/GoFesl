@@ -78,6 +78,8 @@ type TheaterManager struct {
 	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
 }
 
+var Shard string
+
 const COUNTER_GID_KEY = "counters:GID"
 
 // New creates and starts a new TheaterManager
