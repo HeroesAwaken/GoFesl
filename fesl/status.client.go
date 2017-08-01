@@ -39,6 +39,31 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	for k := range matchmaking.Games {
 		gameID := k
 
+		// Get percent_full from databse
+		var args []interface{}
+		statsKeys := make(map[string]string)
+		args = append(args, gameID)
+		args = append(args, "B-U-percent_full")
+
+		rows, err := fM.getServerStatsVariableAmount(1).Query(args...)
+		if err != nil {
+			log.Errorln("Failed gettings stats for hero "+gameID, err.Error())
+		}
+
+		for rows.Next() {
+			var gid, statsKey, statsValue string
+			err := rows.Scan(&gid, &statsKey, &statsValue)
+			if err != nil {
+				log.Errorln("Issue with database:", err.Error())
+			}
+			statsKeys[statsKey] = statsValue
+		}
+
+		if statsKeys["B-U-percent_full"] == "100" {
+			// Don't add for matchmaking if server is full
+			continue
+		}
+
 		gameServer := new(lib.RedisObject)
 		gameServer.New(fM.redis, "gdata", gameID)
 

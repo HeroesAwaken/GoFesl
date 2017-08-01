@@ -40,6 +40,7 @@ type FeslManager struct {
 	stmtGetHeroeByID                    *sql.Stmt
 	stmtClearGameServerStats            *sql.Stmt
 	mapGetStatsVariableAmount           map[int]*sql.Stmt
+	mapGetServerStatsVariableAmount     map[int]*sql.Stmt
 	mapSetStatsVariableAmount           map[int]*sql.Stmt
 	mapSetServerStatsVariableAmount     map[int]*sql.Stmt
 }
@@ -61,6 +62,7 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	fM.localMode = localMode
 
 	fM.mapGetStatsVariableAmount = make(map[int]*sql.Stmt)
+	fM.mapGetServerStatsVariableAmount = make(map[int]*sql.Stmt)
 	fM.mapSetStatsVariableAmount = make(map[int]*sql.Stmt)
 
 	// Prepare database statements
@@ -83,6 +85,32 @@ func (fM *FeslManager) New(name string, port string, certFile string, keyFile st
 	}()
 
 	go fM.run()
+}
+
+func (fM *FeslManager) getServerStatsVariableAmount(statsAmount int) *sql.Stmt {
+	var err error
+
+	// Check if we already have a statement prepared for that amount of stats
+	if statement, ok := fM.mapGetServerStatsVariableAmount[statsAmount]; ok {
+		return statement
+	}
+
+	var query string
+	for i := 1; i < statsAmount; i++ {
+		query += "?, "
+	}
+
+	sql := "SELECT gid, statsKey, statsValue" +
+		"	FROM game_server_stats" +
+		"	WHERE gid=?" +
+		"		AND statsKey IN (" + query + "?)"
+
+	fM.mapGetServerStatsVariableAmount[statsAmount], err = fM.db.Prepare(sql)
+	if err != nil {
+		log.Fatalln("Error preparing mapGetServerStatsVariableAmount with "+sql+" query.", err.Error())
+	}
+
+	return fM.mapGetServerStatsVariableAmount[statsAmount]
 }
 
 func (fM *FeslManager) getStatsStatement(statsAmount int) *sql.Stmt {
