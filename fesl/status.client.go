@@ -43,7 +43,8 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 		gameServer.New(fM.redis, "gdata", gameID)
 
 		answer["props.{games}."+strconv.Itoa(i)+".lid"] = "1"
-		answer["props.{games}."+strconv.Itoa(i)+".fit"] = strconv.Itoa(len(matchmaking.Games) - i)
+		//answer["props.{games}."+strconv.Itoa(i)+".fit"] = strconv.Itoa(len(matchmaking.Games) - i)
+		answer["props.{games}."+strconv.Itoa(i)+".fit"] = "1000"
 		answer["props.{games}."+strconv.Itoa(i)+".gid"] = gameID
 
 		log.Noteln(gameServer.Get("NAME") + " GID: " + gameID + " with fitness of: " + strconv.Itoa(len(matchmaking.Games)-i))
