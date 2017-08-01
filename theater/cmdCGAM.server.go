@@ -87,4 +87,18 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 	answer["GID"] = gameID
 	event.Client.WriteFESL("CGAM", answer, 0x0)
 	tM.logAnswer("CGAM", answer, 0x0)
+
+	// Create game in database
+	query := "INSERT INTO games (gid, shard, game_ip, game_port, game_version, status_join, status_mapname, players_connected, players_joining, players_max, team_1, team_2, team_distribution, created_at, updated_at)"
+	query += " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+
+	stmt, err := tM.db.Prepare(query)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	_, err = stmt.Exec(gameID, Shard, addr.IP.String(), event.Command.Message["PORT"], event.Command.Message["B-version"], event.Command.Message["JOIN"], event.Command.Message["B-U-map"], 0, 0, 0, 0, 0, "")
+	if err != nil {
+		log.Panicln(err)
+	}
 }
