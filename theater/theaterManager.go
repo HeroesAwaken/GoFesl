@@ -73,8 +73,8 @@ type TheaterManager struct {
 
 	// Database Statements
 	stmtGetHeroeByID                      *sql.Stmt
-	stmtDelteServerStatsByGID             *sql.Stmt
-	stmtDelteGameByGIDAndShard            *sql.Stmt
+	stmtDeleteServerStatsByGID            *sql.Stmt
+	stmtDeleteGameByGIDAndShard           *sql.Stmt
 	mapGetStatsVariableAmount             map[int]*sql.Stmt
 	mapSetServerStatsVariableAmount       map[int]*sql.Stmt
 	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
@@ -135,14 +135,14 @@ func (tM *TheaterManager) prepareStatements() {
 		log.Fatalln("Error preparing stmtGetHeroeByID.", err.Error())
 	}
 
-	tM.stmtDelteServerStatsByGID, err = tM.db.Prepare(
+	tM.stmtDeleteServerStatsByGID, err = tM.db.Prepare(
 		"DELETE FROM game_server_stats WHERE gid = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
 	}
 
-	tM.stmtDelteGameByGIDAndShard, err = tM.db.Prepare(
-		"DELETE FROM game_server_stats WHERE gid = ? AND shard = ?")
+	tM.stmtDeleteGameByGIDAndShard, err = tM.db.Prepare(
+		"DELETE FROM games WHERE gid = ? AND shard = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
 	}
@@ -390,12 +390,12 @@ func (tM *TheaterManager) close(event GameSpy.EventClientClose) {
 		if event.Client.RedisState.Get("gdata:GID") != "" {
 
 			// Delete game from db
-			_, err := tM.stmtDelteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
+			_, err := tM.stmtDeleteServerStatsByGID.Exec(event.Client.RedisState.Get("gdata:GID"))
 			if err != nil {
 				log.Errorln("Failed deleting settings for  "+event.Client.RedisState.Get("gdata:GID"), err.Error())
 			}
 
-			_, err = tM.stmtDelteGameByGIDAndShard.Exec(event.Client.RedisState.Get("gdata:GID"), Shard)
+			_, err = tM.stmtDeleteGameByGIDAndShard.Exec(event.Client.RedisState.Get("gdata:GID"), Shard)
 			if err != nil {
 				log.Errorln("Failed deleting game for "+event.Client.RedisState.Get("gdata:GID")+" and shard "+Shard, err.Error())
 			}
