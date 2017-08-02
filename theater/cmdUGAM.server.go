@@ -44,12 +44,7 @@ func (tM *TheaterManager) UGAM(event GameSpy.EventClientFESLCommand) {
 		args = append(args, index)
 		args = append(args, value)
 	}
-
-	stmt, err := tM.db.Prepare("UPDATE games SET updated_at = NOW() WHERE gid = ? AND shard = ?")
-	if err != nil {
-		log.Panicln(err)
-	}
-	_, err = stmt.Exec(event.Command.Message["GID"], Shard)
+	_, err := tM.stmtUpdateGame.Exec(event.Command.Message["GID"], Shard)
 	if err != nil {
 		log.Panicln(err)
 	}

@@ -1,8 +1,8 @@
 package theater
 
 import (
-	"github.com/ReviveNetwork/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // PENT - SERVER sent up when a player joins (entitle player?)
@@ -30,15 +30,19 @@ func (tM *TheaterManager) PLVT(event GameSpy.EventClientFESLCommand) {
 		stats[statsKey] = statsValue
 	}
 
-	teamKey := "team_" + stats["c_team"]
-
-	stmt, err := tM.db.Prepare("UPDATE games SET players_connected = players_connected + 1, " + teamKey + " = " + teamKey + " + 1, updated_at = NOW() WHERE gid = ? AND shard = ?")
-	if err != nil {
-		log.Panicln(err)
-	}
-	_, err = stmt.Exec(event.Command.Message["GID"], Shard)
-	if err != nil {
-		log.Panicln(err)
+	switch stats["c_team"] {
+	case "1":
+		_, err = tM.stmtGameDecreaseTeam1.Exec(event.Command.Message["GID"], Shard)
+		if err != nil {
+			log.Panicln(err)
+		}
+	case "2":
+		_, err = tM.stmtGameDecreaseTeam2.Exec(event.Command.Message["GID"], Shard)
+		if err != nil {
+			log.Panicln(err)
+		}
+	default:
+		log.Errorln("Invalid team " + stats["c_team"] + " for " + pid)
 	}
 
 	answer := make(map[string]string)

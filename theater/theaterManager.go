@@ -75,6 +75,13 @@ type TheaterManager struct {
 	stmtGetHeroeByID                      *sql.Stmt
 	stmtDeleteServerStatsByGID            *sql.Stmt
 	stmtDeleteGameByGIDAndShard           *sql.Stmt
+	stmtAddGame                           *sql.Stmt
+	stmtGameIncreaseJoining               *sql.Stmt
+	stmtGameIncreaseTeam1                 *sql.Stmt
+	stmtGameIncreaseTeam2                 *sql.Stmt
+	stmtGameDecreaseTeam1                 *sql.Stmt
+	stmtGameDecreaseTeam2                 *sql.Stmt
+	stmtUpdateGame                        *sql.Stmt
 	mapGetStatsVariableAmount             map[int]*sql.Stmt
 	mapSetServerStatsVariableAmount       map[int]*sql.Stmt
 	mapSetServerPlayerStatsVariableAmount map[int]*sql.Stmt
@@ -145,6 +152,88 @@ func (tM *TheaterManager) prepareStatements() {
 		"DELETE FROM games WHERE gid = ? AND shard = ?")
 	if err != nil {
 		log.Fatalln("Error preparing stmtClearGameServerStats.", err.Error())
+	}
+
+	tM.stmtAddGame, err = tM.db.Prepare(
+		"INSERT INTO games (" +
+			"	gid," +
+			"	shard," +
+			"	game_ip," +
+			"	game_port," +
+			"	game_version," +
+			"	status_join," +
+			"	status_mapname," +
+			"	players_connected," +
+			"	players_joining," +
+			"	players_max," +
+			"	team_1," +
+			"	team_2," +
+			"	team_distribution," +
+			"	created_at," +
+			"	updated_at)" +
+			"VALUES" +
+			"	(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())")
+	if err != nil {
+		log.Fatalln("Error preparing stmtAddGame.", err.Error())
+	}
+
+	tM.stmtGameIncreaseJoining, err = tM.db.Prepare(
+		"UPDATE games SET " +
+			"	players_joining = players_joining + 1," +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGameIncreaseJoining.", err.Error())
+	}
+
+	tM.stmtGameIncreaseTeam1, err = tM.db.Prepare(
+		"UPDATE games SET " +
+			"	players_connected = players_connected + 1," +
+			"	players_joining = players_joining - 1," +
+			"	team_1 = team_1 + 1," +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGameIncreaseTeam1.", err.Error())
+	}
+
+	tM.stmtGameIncreaseTeam2, err = tM.db.Prepare(
+		"UPDATE games SET " +
+			"	players_connected = players_connected + 1," +
+			"	players_joining = players_joining - 1," +
+			"	team_2 = team_2 + 1," +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGameIncreaseTeam2.", err.Error())
+	}
+
+	tM.stmtGameDecreaseTeam1, err = tM.db.Prepare(
+		"UPDATE games SET " +
+			"	players_connected = players_connected - 1," +
+			"	team_1 = team_1 - 1," +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGameDecreaseTeam1.", err.Error())
+	}
+
+	tM.stmtGameDecreaseTeam2, err = tM.db.Prepare(
+		"UPDATE games SET " +
+			"	players_connected = players_connected - 1," +
+			"	team_2 = team_2 - 1," +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtGameDecreaseTeam2.", err.Error())
+	}
+
+	tM.stmtUpdateGame, err = tM.db.Prepare(
+		"UPDATE games SET" +
+			"	updated_at = NOW()" +
+			"WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Fatalln("Error preparing stmtUpdateGame.", err.Error())
 	}
 }
 

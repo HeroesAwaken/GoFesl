@@ -11,11 +11,7 @@ func (tM *TheaterManager) EGRS(event GameSpy.EventClientFESLCommand) {
 		return
 	}
 
-	stmt, err := tM.db.Prepare("UPDATE games SET players_joining = players_joining + 1, updated_at = NOW() WHERE gid = ? AND shard = ?")
-	if err != nil {
-		log.Panicln(err)
-	}
-	_, err = stmt.Exec(event.Command.Message["GID"], Shard)
+	_, err := tM.stmtGameIncreaseJoining.Exec(event.Command.Message["GID"], Shard)
 	if err != nil {
 		log.Panicln(err)
 	}
