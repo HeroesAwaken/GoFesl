@@ -43,7 +43,7 @@ func (fM *FeslManager) hello(event GameSpy.EventClientTLSCommand) {
 		helloPacket["domainPartition.subDomain"] = "bfwest-dedicated"
 	}
 	helloPacket["curTime"] = "Jun-15-2017 07:26:12 UTC"
-	helloPacket["activityTimeoutSecs"] = "10"
+	helloPacket["activityTimeoutSecs"] = "3600"
 	helloPacket["messengerIp"] = "messaging.ea.com"
 	helloPacket["messengerPort"] = "13505"
 	helloPacket["theaterIp"] = "theater.heroesawaken.com"
