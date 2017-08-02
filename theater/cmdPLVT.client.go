@@ -6,7 +6,7 @@ import (
 )
 
 // PENT - SERVER sent up when a player joins (entitle player?)
-func (tM *TheaterManager) PENT(event GameSpy.EventClientFESLCommand) {
+func (tM *TheaterManager) PLVT(event GameSpy.EventClientFESLCommand) {
 	if !event.Client.IsActive {
 		return
 	}
@@ -32,7 +32,7 @@ func (tM *TheaterManager) PENT(event GameSpy.EventClientFESLCommand) {
 
 	teamKey := "team_" + stats["c_team"]
 
-	stmt, err := tM.db.Prepare("UPDATE games SET players_connected = players_connected + 1, players_joining = players_joining - 1,  " + teamKey + " = " + teamKey + " + 1, updated_at = NOW() WHERE gid = ? AND shard = ?")
+	stmt, err := tM.db.Prepare("UPDATE games SET players_connected = players_connected + 1, " + teamKey + " = " + teamKey + " + 1, updated_at = NOW() WHERE gid = ? AND shard = ?")
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -41,9 +41,13 @@ func (tM *TheaterManager) PENT(event GameSpy.EventClientFESLCommand) {
 		log.Panicln(err)
 	}
 
-	// This allows all right now, I think.
 	answer := make(map[string]string)
-	answer["TID"] = event.Command.Message["TID"]
 	answer["PID"] = event.Command.Message["PID"]
-	event.Client.WriteFESL("PENT", answer, 0x0)
+	answer["LID"] = event.Command.Message["LID"]
+	answer["GID"] = event.Command.Message["GID"]
+	event.Client.WriteFESL("KICK", answer, 0x0)
+
+	answer = make(map[string]string)
+	answer["TID"] = event.Command.Message["TID"]
+	event.Client.WriteFESL("PLVT", answer, 0x0)
 }

@@ -45,7 +45,15 @@ func (tM *TheaterManager) UGAM(event GameSpy.EventClientFESLCommand) {
 		args = append(args, value)
 	}
 
-	var err error
+	stmt, err := tM.db.Prepare("UPDATE games SET updated_at = NOW() WHERE gid = ? AND shard = ?")
+	if err != nil {
+		log.Panicln(err)
+	}
+	_, err = stmt.Exec(event.Command.Message["GID"], Shard)
+	if err != nil {
+		log.Panicln(err)
+	}
+
 	_, err = tM.setServerStatsStatement(keys).Exec(args...)
 	if err != nil {
 		log.Errorln("Failed to update stats for game server "+gameID, err.Error())

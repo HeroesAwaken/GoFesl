@@ -97,7 +97,7 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 		log.Panicln(err)
 	}
 
-	_, err = stmt.Exec(gameID, Shard, addr.IP.String(), event.Command.Message["PORT"], event.Command.Message["B-version"], event.Command.Message["JOIN"], event.Command.Message["B-U-map"], 0, 0, 0, 0, 0, "")
+	_, err = stmt.Exec(gameID, Shard, addr.IP.String(), event.Command.Message["PORT"], event.Command.Message["B-version"], event.Command.Message["JOIN"], event.Command.Message["B-U-map"], 0, 0, event.Command.Message["MAX-PLAYERS"], 0, 0, "")
 	if err != nil {
 		log.Panicln(err)
 	}

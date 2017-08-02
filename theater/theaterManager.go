@@ -291,6 +291,8 @@ func (tM *TheaterManager) run() {
 				go tM.GLST(event.Data.(GameSpy.EventClientFESLCommand))
 			case event.Name == "client.command.PENT":
 				go tM.PENT(event.Data.(GameSpy.EventClientFESLCommand))
+			case event.Name == "client.command.PLVT":
+				go tM.PLVT(event.Data.(GameSpy.EventClientFESLCommand))
 			case event.Name == "client.command.UPLA":
 				go tM.UPLA(event.Data.(GameSpy.EventClientFESLCommand))
 			case event.Name == "client.close":
