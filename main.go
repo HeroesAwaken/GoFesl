@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/ReviveNetwork/GoFesl/GameSpy"
+	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/fesl"
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/matchmaking"
