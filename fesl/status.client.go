@@ -41,9 +41,19 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 		}
 		stats[statsKey] = statsValue
 	}
-	log.Noteln(stats["c_eqp"])
+
 	if strings.Contains(stats["c_eqp"], "3018") {
 		log.Noteln("User trying to matchmake with op launcher")
+		answer := make(map[string]string)
+		answer["TXN"] = "Status"
+		answer["id.id"] = "1"
+		answer["id.partition"] = event.Command.Message["partition.partition"]
+		answer["sessionState"] = "COMPLETE"
+		answer["props.{}.[]"] = "2"
+		answer["props.{resultType}"] = "JOIN"
+		answer["props.{games}.[]"] = "0"
+		event.Client.WriteFESL("pnow", answer, 0x80000000)
+		fM.logAnswer("pnow", answer, 0x80000000)		
 		return
 	}
 
@@ -103,19 +113,6 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	}
 
 	answer["props.{games}.[]"] = strconv.Itoa(i)
-
-	/*
-		answer["props.{games}.0.lid"] = "1"
-		answer["props.{games}.0.fit"] = "1001"
-		answer["props.{games}.0.gid"] = gameID
-		answer["props.{games}.[]"] = "1"
-	*/
-	/*
-		answer["props.{games}.1.lid"] = "2"
-		answer["props.{games}.1.fit"] = "100"
-		answer["props.{games}.1.gid"] = "2"
-		answer["props.{games}.1.avgFit"] = "100"
-	*/
 
 	event.Client.WriteFESL("pnow", answer, 0x80000000)
 	fM.logAnswer("pnow", answer, 0x80000000)
