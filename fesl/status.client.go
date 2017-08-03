@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/lib"
@@ -22,6 +23,27 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	// Check if user is allowed to matchmake
 	if !fM.userHasPermission(event.Client.RedisState.Get("uID"), "game.matchmake") {
 		log.Noteln("User not worthy: " + event.Client.RedisState.Get("username"))
+		return
+	}
+
+	// Check if user has op rocket equipped
+	rows, err := fM.getStatsStatement(1).Query(event.Client.RedisState.Get("uID"), "c_eqp", "c_eqp")
+	if err != nil {
+		log.Errorln("Failed gettings stats for hero "+event.Client.RedisState.Get("uID"), err.Error())
+	}
+
+	stats := make(map[string]string)
+	for rows.Next() {
+		var userID, heroID, heroName, statsKey, statsValue string
+		err := rows.Scan(&userID, &heroID, &heroName, &statsKey, &statsValue)
+		if err != nil {
+			log.Errorln("Issue with database:", err.Error())
+		}
+		stats[statsKey] = statsValue
+	}
+
+	if strings.Contains(stats["c_eqp"], "3018") {
+		log.Noteln("User trying to matchmake with op launcher")
 		return
 	}
 
