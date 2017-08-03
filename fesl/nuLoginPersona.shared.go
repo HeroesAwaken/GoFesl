@@ -34,6 +34,10 @@ func (fM *FeslManager) NuLoginPersona(event GameSpy.EventClientTLSCommand) {
 	lkeyRedis.Set("userID", userID)
 	lkeyRedis.Set("name", heroName)
 
+	saveRedis := make(map[string]interface{})
+	saveRedis["heroID"] = id
+	event.Client.RedisState.SetM(saveRedis)
+
 	loginPacket := make(map[string]string)
 	loginPacket["TXN"] = "NuLoginPersona"
 	loginPacket["lkey"] = lkey

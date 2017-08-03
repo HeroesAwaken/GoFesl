@@ -63,7 +63,7 @@ func (tM *TheaterManager) CGAM(event GameSpy.EventClientFESLCommand) {
 	gameServer.Set("LID", "1")
 	gameServer.Set("GID", gameID)
 	gameServer.Set("IP", addr.IP.String())
-	gameServer.Set("ACTIVE-PLAYERS", "0")
+	gameServer.Set("AP", "0")
 	gameServer.Set("QUEUE-LENGTH", "0")
 
 	event.Client.RedisState.Set("gdata:GID", gameID)

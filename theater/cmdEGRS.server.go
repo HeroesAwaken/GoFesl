@@ -11,9 +11,11 @@ func (tM *TheaterManager) EGRS(event GameSpy.EventClientFESLCommand) {
 		return
 	}
 
-	_, err := tM.stmtGameIncreaseJoining.Exec(event.Command.Message["GID"], Shard)
-	if err != nil {
-		log.Panicln(err)
+	if event.Command.Message["ALLOWED"] == "1" {
+		_, err := tM.stmtGameIncreaseJoining.Exec(event.Command.Message["GID"], Shard)
+		if err != nil {
+			log.Panicln(err)
+		}
 	}
 
 	answer := make(map[string]string)
