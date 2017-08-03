@@ -52,5 +52,11 @@ func (tM *TheaterManager) UGAM(event GameSpy.EventClientFESLCommand) {
 	_, err = tM.setServerStatsStatement(keys).Exec(args...)
 	if err != nil {
 		log.Errorln("Failed to update stats for game server "+gameID, err.Error())
+		if err.Error() == "Error 1213: Deadlock found when trying to get lock; try restarting transaction" {
+			_, err = tM.setServerStatsStatement(keys).Exec(args...)
+			if err != nil {
+				log.Errorln("Failed to update stats for game server "+gameID+" on the second try", err.Error())
+			}
+		}
 	}
 }
