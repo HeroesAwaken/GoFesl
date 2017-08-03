@@ -2,7 +2,6 @@ package fesl
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
@@ -107,17 +106,6 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 
 			key := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".k"]
 			value := event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".t"]
-
-			// Check for forbidden items
-			if strings.Contains(value, ";3018;") {
-				log.Errorln("Equipped forbidden rocket launcher, skipping " + key)
-
-				answer := make(map[string]string)
-				answer["TXN"] = "UpdateStats"
-				event.Client.WriteFESL(event.Command.Query, answer, event.Command.PayloadID)
-				fM.logAnswer(event.Command.Query, answer, event.Command.PayloadID)
-				return
-			}
 
 			if value == "" {
 				log.Noteln("Updating stat", key+":", event.Command.Message["u."+strconv.Itoa(i)+".s."+strconv.Itoa(j)+".v"], "+", stats[key].value)
