@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"math/rand"
 	"net"
 	"strings"
@@ -179,4 +180,10 @@ func Inet_ntoa(ipnr int64) net.IP {
 	bytes[3] = byte((ipnr >> 24) & 0xFF)
 
 	return net.IPv4(bytes[0], bytes[1], bytes[2], bytes[3])
+}
+
+func Inet_aton(ip net.IP) int64 {
+	ipv4Int := big.NewInt(0)
+	ipv4Int.SetBytes(ip.To4())
+	return ipv4Int.Int64()
 }

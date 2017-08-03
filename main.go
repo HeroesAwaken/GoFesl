@@ -4,13 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/signal"
 	"runtime"
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
+	"github.com/ReviveNetwork/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/fesl"
 	"github.com/SpencerSharkey/GoFesl/log"
 	"github.com/SpencerSharkey/GoFesl/matchmaking"
@@ -214,7 +214,7 @@ func main() {
 		}
 	}()
 
-	Shard := RandStringBytes(6)
+	Shard := GameSpy.BF2RandomUnsafe(6)
 	log.Noteln("Starting up as shard: " + Shard)
 	matchmaking.Shard = Shard
 	theater.Shard = Shard
@@ -236,14 +236,4 @@ func main() {
 		log.Noteln("Captured" + sig.String() + ". Shutting down.")
 		os.Exit(0)
 	}
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyz"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }

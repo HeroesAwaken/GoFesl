@@ -1,6 +1,9 @@
 package fesl
 
 import (
+	"encoding/binary"
+	"fmt"
+	"net"
 	"strconv"
 
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
@@ -33,11 +36,12 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	answer["props.{resultType}"] = "JOIN"
 
 	// Find latest game (do better later)
-	//gameID := matchmaking.FindAvailableGID()
+	ipint := binary.BigEndian.Uint32(event.Client.IpAddr.(*net.TCPAddr).IP.To4())
+	gameIDs := matchmaking.FindAvailableGIDs(event.Client.RedisState.Get("heroID"), fmt.Sprint(ipint))
 
 	i := 0
-	for k := range matchmaking.Games {
-		gameID := k
+	for _, gid := range gameIDs {
+		gameID := gid
 
 		// Get percent_full from databse
 		var args []interface{}
