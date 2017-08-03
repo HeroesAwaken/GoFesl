@@ -1,11 +1,11 @@
 {
 	"TXN": "Hello",
-	"activityTimeoutSecs": "10",
+	"activityTimeoutSecs": "3600",
 	"curTime": "Jun-15-2017 07:26:12 UTC",
 	"domainPartition.domain": "eagames",
 	"domainPartition.subDomain": "bfwest-dedicated",
 	"messengerIp": "messaging.ea.com",
 	"messengerPort": "13505",
-	"theaterIp": "alpha.reviveheroes.com",
+	"theaterIp": "localhost",
 	"theaterPort": "18275"
 }

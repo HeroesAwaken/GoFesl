@@ -1,17 +1,11 @@
 {
 	"TXN": "GetPingSites",
-	"minPingSitesToPing": "0",
-	"pingSites.0.addr": "127.0.0.1",
+	"minPingSitesToPing": "2",
+	"pingSites.0.addr": "45.77.66.233",
 	"pingSites.0.name": "gva",
 	"pingSites.0.type": "0",
-	"pingSites.1.addr": "127.0.0.1",
+	"pingSites.1.addr": "45.77.76.193",
 	"pingSites.1.name": "nrt",
 	"pingSites.1.type": "0",
-	"pingSites.2.addr": "127.0.0.1",
-	"pingSites.2.name": "iad",
-	"pingSites.2.type": "0",
-	"pingSites.3.addr": "127.0.0.1",
-	"pingSites.3.name": "sjc",
-	"pingSites.3.type": "0",
-	"pingSites.[]": "4"
+	"pingSites.[]": "2"
 }

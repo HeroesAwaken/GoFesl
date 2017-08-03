@@ -1,5 +1,9 @@
 {
 	"TXN": "NuLookupUserInfo",
-	"userInfo.0.userName": "MakaHost",
-	"userInfo.[]": "1"
+	"userInfo.0.userName": "AngryMaka",
+	"userInfo.1.userName": "DefinitelyNotMaka",
+	"userInfo.2.userName": "MakaHost",
+	"userInfo.3.userName": "Oneman",
+	"userInfo.4.userName": "RoyalMaka",
+	"userInfo.[]": "5"
 }

@@ -1,5 +1,9 @@
 {
 	"TXN": "NuGetPersonas",
-	"personas.0": "MakaHost",
-	"personas.[]": "1"
+	"personas.0": "Oneman",
+	"personas.1": "AngryMaka",
+	"personas.2": "MakaHost",
+	"personas.3": "RoyalMaka",
+	"personas.4": "DefinitelyNotMaka",
+	"personas.[]": "5"
 }

@@ -27,21 +27,21 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	}
 
 	// Check if user has op rocket equipped
-	rows, err := fM.getStatsStatement(1).Query(event.Client.RedisState.Get("uID"), "c_eqp", "c_eqp")
+	rows, err := fM.getStatsStatement(2).Query(event.Client.RedisState.Get("heroID"), event.Client.RedisState.Get("uID"), "c_eqp", "c_apr")
 	if err != nil {
-		log.Errorln("Failed gettings stats for hero "+event.Client.RedisState.Get("uID"), err.Error())
+		log.Errorln("Failed gettings stats for hero "+event.Client.RedisState.Get("heroID"), err.Error())
 	}
 
 	stats := make(map[string]string)
 	for rows.Next() {
-		var userID, heroID, heroName, statsKey, statsValue string
-		err := rows.Scan(&userID, &heroID, &heroName, &statsKey, &statsValue)
+		var userID, heroID, statsKey, statsValue string
+		err := rows.Scan(&userID, &heroID, &statsKey, &statsValue)
 		if err != nil {
 			log.Errorln("Issue with database:", err.Error())
 		}
 		stats[statsKey] = statsValue
 	}
-
+	log.Noteln(stats["c_eqp"])
 	if strings.Contains(stats["c_eqp"], "3018") {
 		log.Noteln("User trying to matchmake with op launcher")
 		return
