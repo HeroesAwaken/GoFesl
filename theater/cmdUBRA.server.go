@@ -1,6 +1,7 @@
 package theater
 
 import (
+	"github.com/ReviveNetwork/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
@@ -17,4 +18,12 @@ func (tM *TheaterManager) UBRA(event GameSpy.EventClientFESLCommand) {
 	answer["TID"] = event.Command.Message["TID"]
 	event.Client.WriteFESL(event.Command.Query, answer, 0x0)
 	tM.logAnswer(event.Command.Query, answer, 0x0)
+
+	gdata := new(lib.RedisObject)
+	gdata.New(tM.redis, "gdata", event.Command.Message["GID"])
+
+	if event.Command.Message["START"] == "1" {
+		gdata.Set("AP", "0")
+	}
+
 }

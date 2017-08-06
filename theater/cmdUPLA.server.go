@@ -1,6 +1,9 @@
 package theater
 
 import (
+	"strconv"
+
+	"github.com/ReviveNetwork/GoFesl/lib"
 	"github.com/SpencerSharkey/GoFesl/GameSpy"
 	"github.com/SpencerSharkey/GoFesl/log"
 )
@@ -44,6 +47,15 @@ func (tM *TheaterManager) UPLA(event GameSpy.EventClientFESLCommand) {
 	if err != nil {
 		log.Errorln("Failed to update stats for player "+pid, err.Error())
 	}
+
+	gdata := new(lib.RedisObject)
+	gdata.New(tM.redis, "gdata", event.Command.Message["GID"])
+
+	num, _ := strconv.Atoi(gdata.Get("AP"))
+
+	num++
+
+	gdata.Set("AP", strconv.Itoa(num))
 
 	// Don't answer
 	/*answer := make(map[string]string)
