@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 type Client struct {

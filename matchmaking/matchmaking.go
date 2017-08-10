@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // Games - a list of available games

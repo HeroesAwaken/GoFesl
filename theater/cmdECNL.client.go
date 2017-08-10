@@ -1,8 +1,8 @@
 package theater
 
 import (
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // ECNL - CLIENT calls when they want to leave

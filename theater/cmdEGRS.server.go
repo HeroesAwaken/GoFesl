@@ -1,8 +1,8 @@
 package theater
 
 import (
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // EGRS - SERVER sent up, tell us if client is 'allowed' to join

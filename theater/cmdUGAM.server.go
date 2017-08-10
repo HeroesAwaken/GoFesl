@@ -1,10 +1,10 @@
 package theater
 
 import (
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
 
-	"github.com/SpencerSharkey/GoFesl/lib"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/lib"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // UGAM - SERVER Called to udpate serverquery ifo

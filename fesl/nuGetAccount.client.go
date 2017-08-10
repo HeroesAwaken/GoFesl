@@ -1,8 +1,8 @@
 package fesl
 
 import (
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // NuGetAccount - General account information retrieved, based on parameters sent

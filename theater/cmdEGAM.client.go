@@ -4,10 +4,10 @@ import (
 	"net"
 	"strconv"
 
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/lib"
-	"github.com/SpencerSharkey/GoFesl/log"
-	"github.com/SpencerSharkey/GoFesl/matchmaking"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/lib"
+	"github.com/HeroesAwaken/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/matchmaking"
 )
 
 // EGAM - CLIENT called when a client wants to join a gameserver

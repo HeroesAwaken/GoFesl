@@ -10,11 +10,11 @@ import (
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/fesl"
-	"github.com/SpencerSharkey/GoFesl/log"
-	"github.com/SpencerSharkey/GoFesl/matchmaking"
-	"github.com/SpencerSharkey/GoFesl/theater"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/fesl"
+	"github.com/HeroesAwaken/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/matchmaking"
+	"github.com/HeroesAwaken/GoFesl/theater"
 	"github.com/go-redis/redis"
 	"github.com/gorilla/mux"
 

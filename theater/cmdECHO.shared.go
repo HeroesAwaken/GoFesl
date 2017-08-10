@@ -3,8 +3,8 @@ package theater
 import (
 	"strconv"
 
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // ECHO - SHARED called like some heartbeat

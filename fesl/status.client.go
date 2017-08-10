@@ -7,10 +7,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/lib"
-	"github.com/SpencerSharkey/GoFesl/log"
-	"github.com/SpencerSharkey/GoFesl/matchmaking"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/matchmaking"
 )
 
 // Status - Basic fesl call to get overall service status (called before pnow?)

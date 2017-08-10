@@ -1,8 +1,8 @@
 package fesl
 
 import (
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // GetPingSites - returns a list of endpoints to test for the lowest latency on a client

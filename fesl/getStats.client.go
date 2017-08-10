@@ -3,8 +3,8 @@ package fesl
 import (
 	"strconv"
 
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 // GetStats - Get basic stats about a soldier/owner (account holder)

@@ -3,9 +3,9 @@ package theater
 import (
 	"strconv"
 
+	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/log"
 	"github.com/ReviveNetwork/GoFesl/lib"
-	"github.com/SpencerSharkey/GoFesl/GameSpy"
-	"github.com/SpencerSharkey/GoFesl/log"
 )
 
 // UPLA - SERVER presumably "update player"? valid response reqiured

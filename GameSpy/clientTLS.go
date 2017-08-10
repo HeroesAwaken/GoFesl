@@ -12,7 +12,7 @@ import (
 	"encoding/binary"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
-	"github.com/SpencerSharkey/GoFesl/log"
+	"github.com/HeroesAwaken/GoFesl/log"
 )
 
 type ClientTLS struct {
