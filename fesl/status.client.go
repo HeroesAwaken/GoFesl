@@ -45,7 +45,7 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	}
 
 	if strings.Contains(stats["c_eqp"], "3018") {
-		sendDenied(event)
+		fM.sendDenied(event)
 		return
 	}
 
@@ -63,19 +63,19 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	ipint := binary.BigEndian.Uint32(event.Client.IpAddr.(*net.TCPAddr).IP.To4())
 	gameIDs := matchmaking.FindAvailableGIDs(event.Client.RedisState.Get("heroID"), fmt.Sprint(ipint))
 
-	for _, gid := range gameIDs {
+	for i, gid := range gameIDs {
 		answer["props.{games}."+strconv.Itoa(i)+".lid"] = "1"
 		answer["props.{games}."+strconv.Itoa(i)+".fit"] = "1000"
 		answer["props.{games}."+strconv.Itoa(i)+".gid"] = gid
 	}
 
-	answer["props.{games}.[]"] = len(gameIDs)
+	answer["props.{games}.[]"] = strconv.Itoa(len(gameIDs))
 
 	event.Client.WriteFESL("pnow", answer, 0x80000000)
 	fM.logAnswer("pnow", answer, 0x80000000)
 }
 
-func sendDenied(event GameSpy.EventClientTLSCommand) {
+func (fM *FeslManager) sendDenied(event GameSpy.EventClientTLSCommand) {
 	answer := make(map[string]string)
 	answer["TXN"] = "Status"
 	answer["id.id"] = "1"
