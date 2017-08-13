@@ -2,8 +2,8 @@ package theater
 
 import (
 	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/lib"
 	"github.com/HeroesAwaken/GoFesl/log"
-	"github.com/ReviveNetwork/GoFesl/lib"
 )
 
 // UBRA - SERVER Called to  update server data

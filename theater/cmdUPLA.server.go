@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/HeroesAwaken/GoFesl/GameSpy"
+	"github.com/HeroesAwaken/GoFesl/lib"
 	"github.com/HeroesAwaken/GoFesl/log"
-	"github.com/ReviveNetwork/GoFesl/lib"
 )
 
 // UPLA - SERVER presumably "update player"? valid response reqiured
