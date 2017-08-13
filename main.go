@@ -50,7 +50,7 @@ var (
 	// CompileVersion we are receiving by the build command
 	CompileVersion = "0"
 	// Version of the Application
-	Version = "0.0.6"
+	Version = "0.0.7"
 
 	// MyConfig Default configuration
 	MyConfig = Config{
