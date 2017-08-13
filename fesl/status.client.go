@@ -22,7 +22,7 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	// Check if user is allowed to matchmake
 	if !fM.userHasPermission(event.Client.RedisState.Get("uID"), "game.matchmake") {
 		log.Noteln("User not worthy: " + event.Client.RedisState.Get("username"))
-		sendDenied(event)
+		fM.sendDenied(event)
 		return
 	}
 
@@ -30,7 +30,7 @@ func (fM *FeslManager) Status(event GameSpy.EventClientTLSCommand) {
 	rows, err := fM.getStatsStatement(2).Query(event.Client.RedisState.Get("heroID"), event.Client.RedisState.Get("uID"), "c_eqp", "c_apr")
 	if err != nil {
 		log.Errorln("Failed gettings stats for hero "+event.Client.RedisState.Get("heroID"), err.Error())
-		sendDenied(event)
+		fM.sendDenied(event)
 		return
 	}
 
