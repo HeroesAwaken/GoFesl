@@ -25,6 +25,12 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 	userId := event.Client.RedisState.Get("uID")
 
 	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
+
+	if users == 0 {
+		log.Noteln("No u.[], defaulting to 1")
+		users = 1
+	}
+
 	for i := 0; i < users; i++ {
 		owner, ok := event.Command.Message["u."+strconv.Itoa(i)+".o"]
 		if event.Client.RedisState.Get("clientType") == "server" {
