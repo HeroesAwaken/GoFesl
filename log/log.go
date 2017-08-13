@@ -108,7 +108,7 @@ func Error(args ...interface{}) {
 	if LogFlag <= ErrorFlag {
 		args = append([]interface{}{prepareLog(ErrorFormat)}, args...)
 		args = append(args, "\033[0m")
-		fmt.Print(args...)
+		fmt.Fprint(os.Stderr, args...)
 	}
 }
 
@@ -120,7 +120,7 @@ func Errorf(format string, args ...interface{}) {
 
 		args = append([]interface{}{prepareLog(ErrorFormat)}, args...)
 		args = append(args, "\033[0m\n")
-		fmt.Printf(buffer.String(), args...)
+		fmt.Fprintf(os.Stderr, buffer.String(), args...)
 	}
 }
 
@@ -128,7 +128,7 @@ func Errorln(args ...interface{}) {
 	if LogFlag <= ErrorFlag {
 		args = append([]interface{}{prepareLog(ErrorFormat)}, args...)
 		args = append(args, "\033[0m")
-		fmt.Println(args...)
+		fmt.Fprintln(os.Stderr, args...)
 	}
 }
 
@@ -136,7 +136,7 @@ func Warning(args ...interface{}) {
 	if LogFlag <= WarningFlag {
 		args = append([]interface{}{prepareLog(WarningFormat)}, args...)
 		args = append(args, "\033[0m")
-		fmt.Print(args...)
+		fmt.Fprint(os.Stderr, args...)
 	}
 }
 
@@ -149,7 +149,7 @@ func Warningf(format string, args ...interface{}) {
 
 		args = append([]interface{}{prepareLog(WarningFormat)}, args...)
 		args = append(args, "\033[0m\n")
-		fmt.Printf(buffer.String(), args...)
+		fmt.Fprintf(os.Stderr, buffer.String(), args...)
 	}
 }
 
@@ -157,7 +157,7 @@ func Warningln(args ...interface{}) {
 	if LogFlag <= WarningFlag {
 		args = append([]interface{}{prepareLog(WarningFormat)}, args...)
 		args = append(args, "\033[0m")
-		fmt.Println(args...)
+		fmt.Fprintln(os.Stderr, args...)
 	}
 }
 
