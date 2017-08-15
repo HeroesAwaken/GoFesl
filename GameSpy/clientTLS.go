@@ -253,6 +253,7 @@ func (clientTLS *ClientTLS) handleRequest() {
 
 		}
 		tempBuf = clientTLS.readFESL(buf[:(n + tempN)])
+		log.Noteln("Reading done")
 		if tempBuf != nil {
 			buf = tempBuf
 			tempN = len(tempBuf)
