@@ -160,8 +160,6 @@ func (clientTLS *ClientTLS) readFESL(data []byte) []byte {
 		curData := p
 		outCommand := new(CommandFESL)
 
-		log.Noteln(len(p.Bytes()))
-
 		var payloadID uint32
 		var payloadLen uint32
 
@@ -199,7 +197,7 @@ func (clientTLS *ClientTLS) readFESL(data []byte) []byte {
 		outCommand.Message = payload
 
 		clientTLS.eventChan <- ClientTLSEvent{
-			Name: "command." + payloadType,
+			Name: "command." + payload["TXN"],
 			Data: outCommand,
 		}
 		clientTLS.eventChan <- ClientTLSEvent{
@@ -253,7 +251,6 @@ func (clientTLS *ClientTLS) handleRequest() {
 
 		}
 		tempBuf = clientTLS.readFESL(buf[:(n + tempN)])
-		log.Noteln("Reading done")
 		if tempBuf != nil {
 			buf = tempBuf
 			tempN = len(tempBuf)
