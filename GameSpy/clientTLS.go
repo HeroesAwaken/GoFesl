@@ -160,6 +160,8 @@ func (clientTLS *ClientTLS) readFESL(data []byte) []byte {
 		curData := p
 		outCommand := new(CommandFESL)
 
+		log.Noteln(len(p.Bytes()))
+
 		var payloadID uint32
 		var payloadLen uint32
 
