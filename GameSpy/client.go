@@ -155,39 +155,42 @@ func (client *Client) WriteFESL(msgType string, msg map[string]string, msgType2 
 	return nil
 }
 
-func (client *Client) readFESL(data []byte) {
+func (client *Client) readFESL(data []byte) []byte {
 	p := bytes.NewBuffer(data)
 	i := 0
 	log.Debugln(hex.EncodeToString(data))
 	var payloadRaw []byte
 	for {
+		// Create a copy at this point in case we have to abort later
+		// And send back the packet to get the rest
+		curData := p
 		outCommand := new(CommandFESL)
 
-		var payloadId uint32
+		var payloadID uint32
 		var payloadLen uint32
 
 		payloadTypeRaw := make([]byte, 4)
 		_, err := p.Read(payloadTypeRaw)
 		if err != nil {
-			return
+			return nil
 		}
 
 		payloadType := string(payloadTypeRaw)
 
-		binary.Read(p, binary.BigEndian, &payloadId)
+		binary.Read(p, binary.BigEndian, &payloadID)
 
 		if p.Len() < 4 {
 			log.Noteln("Strange anomly")
-			return
+			return nil
 		}
 
 		binary.Read(p, binary.BigEndian, &payloadLen)
 
-		log.Noteln("Current message: " + payloadType + " - " + fmt.Sprint(payloadId) + " - " + fmt.Sprint(payloadLen))
+		log.Noteln("Current message: " + payloadType + " - " + fmt.Sprint(payloadID) + " - " + fmt.Sprint(payloadLen))
 
-		if payloadLen < 12 || payloadLen > 1024 {
-			log.Noteln("Strange anomly, would wrap value")
-			return
+		if (payloadLen - 12) > uint32(len(p.Bytes())) {
+			log.Noteln("Packet not fully read")
+			return curData.Bytes()
 		}
 
 		payloadRaw = make([]byte, (payloadLen - 12))
@@ -196,7 +199,7 @@ func (client *Client) readFESL(data []byte) {
 		payload := ProcessFESL(string(payloadRaw))
 
 		outCommand.Query = payloadType
-		outCommand.PayloadID = payloadId
+		outCommand.PayloadID = payloadID
 		outCommand.Message = payload
 
 		client.eventChan <- ClientEvent{
@@ -211,11 +214,14 @@ func (client *Client) readFESL(data []byte) {
 		i++
 	}
 
+	return nil
 }
 
 func (client *Client) handleRequest() {
+	tempN := 0
 	client.IsActive = true
 	buf := make([]byte, 4096) // buffer
+	tempBuf := []byte{}
 
 	for client.IsActive {
 		n, err := (*client.conn).Read(buf)
@@ -243,9 +249,14 @@ func (client *Client) handleRequest() {
 		}
 
 		if client.FESL {
-			client.readFESL(buf[:n])
-
-			buf = make([]byte, 4096)
+			tempBuf = client.readFESL(buf[:(n + tempN)])
+			if tempBuf != nil {
+				buf = tempBuf
+				tempN = len(tempBuf)
+			} else {
+				buf = make([]byte, 4096) // new fresh buffer
+				tempN = 0
+			}
 			continue
 		}
 

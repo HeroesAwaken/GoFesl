@@ -27,7 +27,7 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 	users, _ := strconv.Atoi(event.Command.Message["u.[]"])
 
 	if users == 0 {
-		log.Noteln("No u.[], defaulting to 1")
+		log.Warning("No u.[], defaulting to 1")
 		users = 1
 	}
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"encoding/binary"
+	"encoding/hex"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
 	"github.com/HeroesAwaken/GoFesl/log"
@@ -110,6 +111,7 @@ func (clientTLS *ClientTLS) WriteFESL(msgType string, msg map[string]string, msg
 	return nil
 }
 
+/*
 func (clientTLS *ClientTLS) readFESL(data []byte) {
 
 	if len(data) < 12 {
@@ -145,6 +147,69 @@ func (clientTLS *ClientTLS) readFESL(data []byte) {
 	}
 
 }
+*/
+
+func (clientTLS *ClientTLS) readFESL(data []byte) []byte {
+	p := bytes.NewBuffer(data)
+	i := 0
+	log.Debugln(hex.EncodeToString(data))
+	var payloadRaw []byte
+	for {
+		// Create a copy at this point in case we have to abort later
+		// And send back the packet to get the rest
+		curData := p
+		outCommand := new(CommandFESL)
+
+		var payloadID uint32
+		var payloadLen uint32
+
+		payloadTypeRaw := make([]byte, 4)
+		_, err := p.Read(payloadTypeRaw)
+		if err != nil {
+			return nil
+		}
+
+		payloadType := string(payloadTypeRaw)
+
+		binary.Read(p, binary.BigEndian, &payloadID)
+
+		if p.Len() < 4 {
+			log.Noteln("Strange anomly")
+			return nil
+		}
+
+		binary.Read(p, binary.BigEndian, &payloadLen)
+
+		log.Noteln("Current message: " + payloadType + " - " + fmt.Sprint(payloadID) + " - " + fmt.Sprint(payloadLen))
+
+		if (payloadLen - 12) > uint32(len(p.Bytes())) {
+			log.Noteln("Packet not fully read")
+			return curData.Bytes()
+		}
+
+		payloadRaw = make([]byte, (payloadLen - 12))
+		p.Read(payloadRaw)
+
+		payload := ProcessFESL(string(payloadRaw))
+
+		outCommand.Query = payloadType
+		outCommand.PayloadID = payloadID
+		outCommand.Message = payload
+
+		clientTLS.eventChan <- ClientTLSEvent{
+			Name: "command." + payloadType,
+			Data: outCommand,
+		}
+		clientTLS.eventChan <- ClientTLSEvent{
+			Name: "command",
+			Data: outCommand,
+		}
+
+		i++
+	}
+
+	return nil
+}
 
 func (clientTLS *ClientTLS) Close() {
 	log.Notef("%s: ClientTLS closing connection.", clientTLS.name)
@@ -156,8 +221,10 @@ func (clientTLS *ClientTLS) Close() {
 }
 
 func (clientTLS *ClientTLS) handleRequest() {
+	tempN := 0
 	clientTLS.IsActive = true
 	buf := make([]byte, 4096) // buffer
+	tempBuf := []byte{}
 
 	for clientTLS.IsActive {
 		n, err := (*clientTLS.conn).Read(buf)
@@ -183,8 +250,14 @@ func (clientTLS *ClientTLS) handleRequest() {
 			return
 
 		}
-		clientTLS.readFESL(buf[:n])
-		buf = make([]byte, 4096) // buffer
+		tempBuf = clientTLS.readFESL(buf[:(n + tempN)])
+		if tempBuf != nil {
+			buf = tempBuf
+			tempN = len(tempBuf)
+		} else {
+			buf = make([]byte, 4096) // new fresh buffer
+			tempN = 0
+		}
 	}
 
 }
