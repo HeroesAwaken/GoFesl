@@ -218,7 +218,6 @@ func (client *Client) readFESL(data []byte) []byte {
 }
 
 func (client *Client) handleRequest() {
-	tempN := 0
 	client.IsActive = true
 	buf := make([]byte, 4096) // buffer
 	tempBuf := []byte{}
@@ -249,14 +248,13 @@ func (client *Client) handleRequest() {
 		}
 
 		if client.FESL {
-			tempBuf = client.readFESL(buf[:(n + tempN)])
 			if tempBuf != nil {
-				buf = tempBuf
-				tempN = len(tempBuf)
+				tempBuf = append(tempBuf, buf[:n]...)
+				tempBuf = client.readFESL(buf[:n])
 			} else {
-				buf = make([]byte, 4096) // new fresh buffer
-				tempN = 0
+				tempBuf = client.readFESL(buf[:n])
 			}
+			buf = make([]byte, 4096) // new fresh buffer
 			continue
 		}
 

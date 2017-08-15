@@ -221,7 +221,6 @@ func (clientTLS *ClientTLS) Close() {
 }
 
 func (clientTLS *ClientTLS) handleRequest() {
-	tempN := 0
 	clientTLS.IsActive = true
 	buf := make([]byte, 4096) // buffer
 	tempBuf := []byte{}
@@ -250,14 +249,13 @@ func (clientTLS *ClientTLS) handleRequest() {
 			return
 
 		}
-		tempBuf = clientTLS.readFESL(buf[:(n + tempN)])
 		if tempBuf != nil {
-			buf = tempBuf
-			tempN = len(tempBuf)
+			tempBuf = append(tempBuf, buf[:n]...)
+			tempBuf = clientTLS.readFESL(buf[:n])
 		} else {
-			buf = make([]byte, 4096) // new fresh buffer
-			tempN = 0
+			tempBuf = clientTLS.readFESL(buf[:n])
 		}
+		buf = make([]byte, 4096) // new fresh buffer
 	}
 
 }
