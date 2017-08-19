@@ -6,7 +6,7 @@ debug*
 *.zip
 config.yml
 .remote-sync.json
-commands
 HeroesLogin
 *.pem
-commands/
+commands
+magma*

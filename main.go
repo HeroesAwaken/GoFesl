@@ -4,9 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http/httputil"
 	"os"
 	"os/signal"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/HeroesAwaken/GoAwaken/core"
@@ -68,14 +70,17 @@ var (
 )
 
 func emtpyHandler(w http.ResponseWriter, r *http.Request) {
-	log.Debugln(r.URL.String())
+	log.Noteln("EMTPTY", r.URL.Path)
+	LogMagmaRequest(r, "requestEmtpy")
+
 	fmt.Fprintf(w, "<update><status>Online</status></update>")
 }
 
 func relationship(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("RELATIONSHIP", r.URL.Path)
+	LogMagmaRequest(r, "requestRelationship")
+
 	vars := mux.Vars(r)
-	log.Noteln(r.URL.String())
-	log.Noteln("<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>" + vars["id"] + "</realid></update>")
 	fmt.Fprintf(w, "<update><id>1</id><name>Test</name><state>ACTIVE</state><type>server</type><status>Online</status><realid>"+vars["id"]+"</realid></update>")
 }
 
@@ -94,8 +99,10 @@ func sessionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("ENTITLEMENTS", r.URL.Path)
+	LogMagmaRequest(r, "requestEntitlements")
+
 	vars := mux.Vars(r)
-	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><entitlements><entitlement><entitlementId>1</entitlementId><entitlementTag>WEST_Custom_Item_142</entitlementTag><status>ACTIVE</status><userId>2</userId></entitlement></entitlements>")
 	fmt.Fprintf(w,
 		"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?>"+
 			"<entitlements>"+
@@ -115,18 +122,34 @@ func entitlementsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func offersHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("OFFERS", r.URL.Path)
+	LogMagmaRequest(r, "requestOffers")
+
 	contents, _ := ioutil.ReadFile("api/products.xml")
 	str := string(contents)
-	log.Noteln(str)
 	fmt.Fprintf(w, str)
-
 }
 
 func walletsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Noteln("WALLETS", r.URL.Path)
+	LogMagmaRequest(r, "requestWallets")
 	//vars := mux.Vars(r)
-	log.Noteln("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts></billingAccounts>")
 	fmt.Fprintf(w, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><billingAccounts><walletAccount><currency>hp</currency><balance>1</balance></billingAccounts>")
+}
 
+// LogMagmaRequest log data to a debug file for further analysis
+func LogMagmaRequest(r *http.Request, commandType string) {
+
+	b, err := httputil.DumpRequest(r, true)
+	if err != nil {
+		panic(err)
+	}
+
+	os.MkdirAll("./magma/"+commandType+"", 0777)
+	err = ioutil.WriteFile("./magma/"+commandType+"/"+strings.Replace(r.URL.Path, "/", "_", -1)+r.URL.RawQuery, b, 0644)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func collectGlobalMetrics(iDB *core.InfluxDB) {

@@ -22,6 +22,8 @@
 	"owners.3.ownerType": "1",
 	"owners.4.ownerId": "7342",
 	"owners.4.ownerType": "1",
-	"owners.[]": "5",
+	"owners.5.ownerId": "11787",
+	"owners.5.ownerType": "1",
+	"owners.[]": "6",
 	"periodId": "0"
 }
