@@ -135,8 +135,9 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 
 					if intValue <= 0 || event.Client.RedisState.Get("clientType") == "server" || key == "c_ltp" || key == "c_sln" || key == "c_ltm" || key == "c_slm" || key == "c_wmid0" || key == "c_wmid1" || key == "c_tut" || key == "c_wmid2" {
 						// Only allow increasing numbers (like HeroPoints) by the server for now
+						newValue := stats[key].value + intValue
 
-						if key == "c_wallet_hero" && intValue < 0 {
+						if key == "c_wallet_hero" && newValue < 0 {
 							log.Errorln("Not allowed to process stat. c_wallet_hero lower than 0", key)
 							answer := make(map[string]string)
 							answer["TXN"] = "UpdateStats"
@@ -145,7 +146,6 @@ func (fM *FeslManager) UpdateStats(event GameSpy.EventClientTLSCommand) {
 							return
 						}
 
-						newValue := stats[key].value + intValue
 						value = strconv.FormatFloat(newValue, 'f', 4, 64)
 					} else {
 						log.Errorln("Not allowed to process stat", key)
